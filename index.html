@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1D3A2F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WMC">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>West Marin Civic</title>
+<style>
+/* ============================================================
+   WEST MARIN CIVIC — Phase 2 Live Data
+   V4 "Status-as-banner" · Coastal Fog palette
+   ============================================================ */
+
+:root {
+  --fog:     #F4F2EE;
+  --forest:  #1D3A2F;
+  --sky:     #3B7A9E;
+  --sand:    #D9D5CC;
+  --white:   #FFFFFF;
+  --muted:   #6B7B74;
+  --ghost:   #9B9890;
+  --red:     #B91C1C;
+  --amber:   #92400E;
+  --orange:  #C2410C;
+  --green:   #16a34a;
+  --divider: #EDEAE3;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; background: var(--fog); }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: var(--fog);
+  color: var(--forest);
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--fog);
+}
+
+/* ------------------------------------------------------------------ NAV */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 0.5px solid var(--sand);
+  position: sticky;
+  top: 0;
+  background: var(--fog);
+  z-index: 10;
+}
+.wordmark { font-size: 15px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; user-select: none; }
+.wordmark em { font-style: normal; color: var(--sky); }
+.nav-links { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.nav-links .emg { color: var(--red); font-weight: 600; }
+
+/* ------------------------------------------------------------------ MAIN */
+.main { padding: 18px 20px 80px; }
+
+/* ------------------------------------------------------------------ STATUS TAG */
+.status-tag { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--sky); margin-bottom: 3px; }
+.status-disc { font-size: 10px; color: var(--ghost); margin-bottom: 11px; letter-spacing: .01em; }
+
+/* ------------------------------------------------------------------ WEATHER LINE */
+.wx-line { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; letter-spacing: .01em; }
+.wx-line .icon { font-size: 14px; filter: saturate(.8); line-height: 1; }
+.wx-line .warn { color: var(--amber); font-weight: 600; }
+
+/* ------------------------------------------------------------------ PILL */
+.pill {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 15px; border-radius: 999px;
+  width: 100%; cursor: pointer; border: none;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  text-align: left; color: #fff;
+  position: relative; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-radius .25s ease; outline: none; line-height: 1;
+}
+.pill::after { content: ""; position: absolute; inset: -10px -6px; }
+.pill-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.pill-body { flex: 1; line-height: 1.25; }
+.pill-body small { display: block; font-weight: 400; font-size: 11px; opacity: .88; margin-top: 2px; }
+.pill-caret { font-size: 11px; opacity: .75; flex-shrink: 0; transition: transform .25s ease; }
+
+.pill[data-pill="calm"]    { background: var(--green); }
+.pill[data-pill="watch"]   { background: var(--amber); }
+.pill[data-pill="alert"]   { background: var(--red); }
+.pill[data-pill="unknown"] { background: var(--orange); }
+.pill[data-pill="calm"]    .pill-dot { background: rgba(255,255,255,.9); }
+.pill[data-pill="watch"]   .pill-dot { background: #FDE68A; }
+.pill[data-pill="alert"]   .pill-dot { background: #FCA5A5; }
+.pill[data-pill="unknown"] .pill-dot { background: #FED7AA; }
+
+.pill.is-open { border-radius: 12px 12px 0 0; }
+.pill.is-open .pill-caret { transform: rotate(180deg); }
+
+/* ------------------------------------------------------------------ TRAY */
+.tray { overflow: hidden; max-height: 0; transition: max-height .32s ease; }
+.tray.is-open { max-height: 340px; margin-bottom: 2px; }
+
+.tray-inner {
+  padding: 10px 13px 12px;
+  border: 0.5px solid rgba(22,163,74,.28);
+  border-top: 0; border-radius: 0 0 12px 12px;
+  background: rgba(22,163,74,.05);
+}
+.tray[data-tray="watch"]   .tray-inner { border-color: rgba(146,64,14,.22); background: rgba(146,64,14,.05); }
+.tray[data-tray="alert"]   .tray-inner { border-color: rgba(185,28,28,.2);  background: rgba(185,28,28,.04); }
+.tray[data-tray="unknown"] .tray-inner { border-color: rgba(194,65,12,.2);  background: rgba(194,65,12,.04); }
+
+.tray-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.tray-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 6px; font-size: 11px; padding: 4px 0;
+  border-bottom: 0.5px solid rgba(0,0,0,.06);
+}
+.tray-row:nth-last-child(-n+2) { border-bottom: none; }
+.tray-road  { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
+.tray-status { font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.tray-status.g { color: var(--green); }
+.tray-status.r { color: var(--red); }
+.tray-status.a { color: var(--amber); }
+
+/* ------------------------------------------------------------------ SECTION HEAD */
+.section-head {
+  font-size: 10px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--sky);
+  margin: 20px 0 9px; display: flex; align-items: center; gap: 8px;
+}
+.section-head::after { content: ""; flex: 1; height: 0.5px; background: var(--sand); }
+
+/* ------------------------------------------------------------------ CONTACTS — text rows (calm / watch) */
+.contact-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 0; border-bottom: 0.5px solid var(--divider); font-size: 12px;
+}
+.contact-row:last-child { border-bottom: none; }
+.contact-label { color: var(--muted); }
+.contact-val { font-weight: 600; color: var(--forest); }
+.contact-911 { font-size: 16px; }
+
+/* ------------------------------------------------------------------ CONTACTS — call buttons (alert) */
+.call-btn {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 15px; border-radius: 8px; margin-bottom: 6px;
+  text-decoration: none; font-family: inherit;
+  -webkit-tap-highlight-color: transparent; transition: opacity .15s;
+}
+.call-btn:active { opacity: .82; }
+.call-btn.emg { background: var(--red); color: #fff; }
+.call-btn.std { background: var(--white); border: 0.5px solid var(--sand); color: var(--forest); }
+.call-icon { font-size: 17px; width: 24px; text-align: center; flex-shrink: 0; line-height: 1; }
+.call-label { font-size: 13px; font-weight: 700; line-height: 1.2; }
+.call-sub   { font-size: 11px; opacity: .72; margin-top: 2px; }
+.call-btn.emg .call-label { font-size: 15px; }
+.call-btn.emg .call-sub   { opacity: .88; }
+
+/* ------------------------------------------------------------------ FROM WMC */
+.from-card { background: var(--white); border: 0.5px solid var(--sand); border-radius: 8px; padding: 13px 14px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* ------------------------------------------------------------------ FEED FOOTER */
+.feed-footer { margin-top: 24px; padding-top: 12px; border-top: 0.5px solid var(--sand); }
+.feed-row { display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: var(--ghost); letter-spacing: .04em; }
+.feed-src { display: inline-flex; align-items: center; gap: 5px; }
+.feed-src b { font-weight: 700; color: var(--forest); }
+.feed-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.feed-dot.live  { background: var(--green); box-shadow: 0 0 0 2px rgba(22,163,74,.15); }
+.feed-dot.stale { background: var(--ghost); box-shadow: 0 0 0 2px rgba(155,152,144,.2); }
+.feed-dot.off   { background: var(--red);   box-shadow: 0 0 0 2px rgba(185,28,28,.15); }
+.feed-summary { font-size: 10px; color: var(--ghost); text-align: center; margin-top: 6px; letter-spacing: .01em; }
+.feed-summary b { color: var(--forest); font-weight: 600; }
+
+/* ------------------------------------------------------------------ REPORT STALE */
+.report-row { margin-top: 11px; text-align: center; }
+.report-link { font-size: 10px; font-weight: 600; color: var(--red); text-decoration: none; letter-spacing: .02em; }
+.report-link::before { content: "⚠ "; opacity: .8; }
+.report-link:hover, .report-link:focus { text-decoration: underline; }
+
+/* ------------------------------------------------------------------ STATE VISIBILITY */
+.only-alert { display: none; }
+[data-state="alert"]   .only-alert { display: block; }
+[data-state="alert"]   .hide-alert { display: none; }
+[data-state="unknown"] .only-alert { display: block; }
+[data-state="unknown"] .hide-alert { display: none; }
+
+/* ------------------------------------------------------------------ DEV SWITCHER */
+.dev-bar {
+  position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px;
+  background: rgba(29,58,47,.93); padding: 7px 10px; border-radius: 999px;
+  z-index: 999; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.dev-btn {
+  font-family: inherit; font-size: 11px; font-weight: 600;
+  padding: 5px 13px; border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,.18);
+  background: transparent; color: rgba(255,255,255,.65);
+  cursor: pointer; letter-spacing: .05em; text-transform: uppercase; transition: all .15s;
+}
+.dev-btn.active { background: #fff; color: var(--forest); border-color: transparent; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app" data-state="calm">
+
+  <nav class="nav">
+    <div class="wordmark">West Marin <em>Civic</em></div>
+    <div class="nav-links"><span class="emg">Emergency</span><span>More</span></div>
+  </nav>
+
+  <main class="main">
+
+    <div class="status-tag">Emergency status</div>
+    <div class="status-disc">Serving Point Reyes · Inverness · Inverness Park</div>
+
+    <div class="wx-line" id="wxLine">
+      <span class="icon">☀️</span>
+      <span id="wxText">Connecting…</span>
+    </div>
+
+    <button class="pill" id="pill" data-pill="calm" aria-expanded="false" aria-controls="pillTray">
+      <span class="pill-dot"></span>
+      <span class="pill-body">
+        <span id="pillTitle">Checking…</span>
+        <small id="pillSub"> </small>
+      </span>
+      <span class="pill-caret" aria-hidden="true">▾</span>
+    </button>
+
+    <div class="tray" id="pillTray" data-tray="calm" role="region" aria-label="Road status">
+      <div class="tray-inner">
+        <div class="tray-grid" id="trayGrid"></div>
+      </div>
+    </div>
+
+    <!-- Emergency contacts — text rows (calm / watch) -->
+    <div class="hide-alert">
+      <div class="section-head">Emergency contacts</div>
+      <div class="contact-row"><span class="contact-label">Emergency</span><span class="contact-val contact-911">911</span></div>
+      <div class="contact-row"><span class="contact-label">Point Reyes Fire Station</span><span class="contact-val">(415) 473-7699</span></div>
+      <div class="contact-row"><span class="contact-label">Inverness VFD</span><span class="contact-val">(415) 669-1414</span></div>
+      <div class="contact-row"><span class="contact-label">Marin Fire Hotline</span><span class="contact-val">(415) 473-7191</span></div>
+    </div>
+
+    <!-- Emergency contacts — call buttons (alert only) -->
+    <div class="only-alert">
+      <div class="section-head">Contacts</div>
+      <a class="call-btn emg" href="tel:911">
+        <span class="call-icon" aria-hidden="true">☎</span>
+        <span><span class="call-label">Call 911</span><span class="call-sub" style="display:block">Emergency · fire, medical, police</span></span>
+      </a>
+      <a class="call-btn std" href="tel:+14154737699">
+        <span class="call-icon" aria-hidden="true">☎</span>
+        <span><span class="call-label">Point Reyes Fire Station</span><span class="call-sub" style="display:block">(415) 473-7699</span></span>
+      </a>
+      <a class="call-btn std" href="tel:+14156691414">
+        <span class="call-icon" aria-hidden="true">☎</span>
+        <span><span class="call-label">Inverness VFD</span><span class="call-sub" style="display:block">(415) 669-1414</span></span>
+      </a>
+      <a class="call-btn std" href="tel:+14154737191">
+        <span class="call-icon" aria-hidden="true">☎</span>
+        <span><span class="call-label">Marin Fire Hotline</span><span class="call-sub" style="display:block">(415) 473-7191</span></span>
+      </a>
+    </div>
+
+    <!-- From West Marin Civic -->
+    <div class="hide-alert">
+      <div class="section-head">From West Marin Civic</div>
+      <div class="from-card">Seasonal note and local notices will appear here.</div>
+    </div>
+
+    <!-- Feed footer -->
+    <div class="feed-footer">
+      <div class="feed-row">
+        <span class="feed-src"><span class="feed-dot stale" id="dot511"></span><b>511</b> · <span id="age511">—</span></span>
+        <span class="feed-src"><span class="feed-dot stale" id="dotNWS"></span><b>NWS</b> · <span id="ageNWS">—</span></span>
+        <span class="feed-src"><span class="feed-dot stale" id="dotWFIGS"></span><b>WFIGS</b> · <span id="ageWFIGS">—</span></span>
+      </div>
+      <div class="feed-summary" id="feedSummary">Connecting to feeds…</div>
+    </div>
+
+    <div class="report-row">
+      <a class="report-link" href="#" id="reportLink">Report stale data</a>
+    </div>
+
+  </main>
+</div>
+
+<div class="dev-bar" aria-hidden="true">
+  <button class="dev-btn" data-s="calm">Calm</button>
+  <button class="dev-btn" data-s="watch">Watch</button>
+  <button class="dev-btn" data-s="alert">Alert</button>
+  <button class="dev-btn" data-s="unknown">Unknown</button>
+  <button class="dev-btn active" data-s="live">Live</button>
+</div>
+
+<script src="config.js"></script>
+<script>
+'use strict';
+
+// ============================================================
+// ROADS
+// ============================================================
+
+const ROADS = [
+  { id: 'hwy1n',  label: 'Hwy 1 North',    detail: 'Point Reyes north' },
+  { id: 'hwy1s',  label: 'Hwy 1 South',    detail: 'Olema → Stinson' },
+  { id: 'sfd',    label: 'SFD Blvd',        detail: 'Inverness corridor' },
+  { id: 'bv',     label: 'Bear Valley',     detail: 'to PRNS HQ' },
+  { id: 'prp',    label: 'PR-Petaluma',     detail: 'Pt Reyes–Petaluma Rd' },
+  { id: 'plat',   label: 'Platform Bridge',  detail: 'Platform Bridge' },
+  { id: 'nic',    label: 'Nicasio Valley',  detail: 'Nicasio Valley Rd' },
+  { id: 'marsh',  label: 'Marshall Petaluma', detail: 'Marshall Petaluma' },
+  { id: 'tom',    label: 'Tomales Petaluma', detail: 'Tomales Petaluma' },
+  { id: 'fallon', label: 'Fallon Two Rock', detail: 'Fallon–Two Rock Rd' },
+  { id: 'vf',     label: 'Valley Ford',     detail: 'Valley Ford Rd' },
+];
+
+// Keyword matchers for 511 event road names → road IDs
+// lat: [minLat, maxLat] distinguishes Hwy 1 North vs South at ~38.04 (Olema)
+const ROAD_MATCHERS = [
+  { id: 'hwy1n',  kw: ['highway 1','hwy 1','ca-1','route 1','ca 1'],  lat: [38.04, 99] },
+  { id: 'hwy1s',  kw: ['highway 1','hwy 1','ca-1','route 1','ca 1'],  lat: [-99, 38.04] },
+  { id: 'sfd',    kw: ['sir francis drake','francis drake'] },
+  { id: 'bv',     kw: ['bear valley'] },
+  { id: 'prp',    kw: ['point reyes-petaluma','reyes-petaluma','reyes petaluma'] },
+  { id: 'plat',   kw: ['platform bridge'] },
+  { id: 'nic',    kw: ['nicasio valley'] },
+  { id: 'marsh',  kw: ['marshall-petaluma','marshall petaluma'] },
+  { id: 'tom',    kw: ['tomales-petaluma','tomales petaluma'] },
+  { id: 'fallon', kw: ['fallon-two rock','fallon two rock'] },
+  { id: 'vf',     kw: ['valley ford'] },
+];
+
+const CLEAR   = { status: 'Clear',   cls: 'g' };
+const CLOSED  = { status: 'Closed',  cls: 'r' };
+const CAUTION = { status: 'Caution', cls: 'a' };
+
+// ============================================================
+// MOCK DATA (dev switcher + loading fallback)
+// ============================================================
+
+const MOCK = {
+  calm: {
+    level: 'calm', pillTitle: 'All clear', pillSub: 'Inverness · just now',
+    wxIcon: '⛅', wxText: 'Partly cloudy · 58°F · W 12 mph', wxWarn: false,
+    roads: ROADS.map(r => ({ ...r, ...CLEAR })),
+    feeds: { '511':{age:'3m',state:'live'}, 'NWS':{age:'6m',state:'live'}, 'WFIGS':{age:'42m',state:'live'} },
+    feedSummary: 'All feeds live · updated <b>3 min ago</b>',
+  },
+  watch: {
+    level: 'watch', pillTitle: 'Fire Weather Watch', pillSub: 'NWS CAZ505 · until 8 PM PDT',
+    wxIcon: '🌬️', wxText: 'Breezy · 74°F · NE 24 mph', wxWarn: true,
+    roads: [
+      ...ROADS.slice(0,1).map(r => ({ ...r, ...CLEAR })),
+      { ...ROADS[1], status: 'Caution', cls: 'a', detail: 'Debris · Olema → Stinson' },
+      ...ROADS.slice(2).map(r => ({ ...r, ...CLEAR })),
+    ],
+    feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'3m',state:'live'}, 'WFIGS':{age:'55m',state:'live'} },
+    feedSummary: 'All feeds live · updated <b>1 min ago</b>',
+  },
+  alert: {
+    level: 'alert', pillTitle: 'Active fire — Tomales Ridge', pillSub: '120 ac · 5% contained · 12 min ago',
+    wxIcon: '🔥', wxText: 'Red flag until 9 PM · NW 38 mph gusts · 14% humidity', wxWarn: true,
+    roads: [
+      { ...ROADS[0], status: 'Closed',  cls: 'r', detail: 'Marshall → Pt Reyes Station' },
+      { ...ROADS[1], ...CLEAR },
+      { ...ROADS[2], status: 'Caution', cls: 'a', detail: 'Smoke · use caution' },
+      { ...ROADS[3], status: 'Closed',  cls: 'r', detail: 'Evacuation route' },
+      ...ROADS.slice(4).map(r => ({ ...r, ...CLEAR })),
+    ],
+    feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'2m',state:'live'}, 'WFIGS':{age:'12m',state:'live'} },
+    feedSummary: null,
+  },
+  unknown: {
+    level: 'unknown', pillTitle: 'Status unknown', pillSub: 'Feeds offline · call 911 for emergencies',
+    wxIcon: '📡', wxText: 'Unable to reach data feeds', wxWarn: false,
+    roads: ROADS.map(r => ({ ...r, status: '—', cls: '' })),
+    feeds: { '511':{age:'18m',state:'off'}, 'NWS':{age:'18m',state:'off'}, 'WFIGS':{age:'18m',state:'off'} },
+    feedSummary: '⚠ All feeds offline · check your connection',
+  },
+};
+
+// ============================================================
+// FRESHNESS + POLLING STATE
+// ============================================================
+
+const STALE_MINS = { '511': 15, 'NWS': 15, 'WFIGS': 90 };
+const fresh = { '511': { at: null, ok: false }, 'NWS': { at: null, ok: false }, 'WFIGS': { at: null, ok: false } };
+
+let currentLevel  = 'calm';
+let failedCycles  = 0;
+let refreshTimer  = null;
+
+function scheduleNext() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(refresh, currentLevel === 'alert' ? 60_000 : 5 * 60_000);
+}
+
+function markFresh(src, ok, at = Date.now()) { fresh[src] = { at, ok }; }
+
+function ageStr(at) {
+  if (!at) return '—';
+  const s = Math.floor((Date.now() - at) / 1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h';
+}
+
+function dotState(src) {
+  const f = fresh[src];
+  if (!f.at || !f.ok) return f.at ? 'off' : 'stale';
+  return (Date.now() - f.at) / 60000 < STALE_MINS[src] ? 'live' : 'stale';
+}
+
+// ============================================================
+// NWS ALERTS  (zone CAZ505 = Coastal North Bay incl. Pt Reyes)
+// ============================================================
+
+const FIRE_ALERT_EVENTS = ['Red Flag Warning', 'Fire Warning', 'Extreme Fire Danger'];
+const FIRE_WATCH_EVENTS  = ['Fire Weather Watch'];
+
+async function fetchNWSAlerts() {
+  const res = await fetch('https://api.weather.gov/alerts/active?zone=CAZ505', {
+    headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' }
+  });
+  const cachedAt = res.headers.get('X-Cached-At');
+  if (!res.ok) throw new Error('NWS alerts ' + res.status);
+  const data = await res.json();
+  const features = data.features || [];
+
+  for (const f of features) {
+    if (FIRE_ALERT_EVENTS.includes(f.properties?.event))
+      return { level: 'alert', props: f.properties, cachedAt: cachedAt ? +cachedAt : null };
+  }
+  for (const f of features) {
+    if (FIRE_WATCH_EVENTS.includes(f.properties?.event))
+      return { level: 'watch', props: f.properties, cachedAt: cachedAt ? +cachedAt : null };
+  }
+  return { level: 'calm', props: null, cachedAt: cachedAt ? +cachedAt : null };
+}
+
+// ============================================================
+// NWS WEATHER  (MTR grid 74,121 = Point Reyes area)
+// ============================================================
+
+async function fetchNWSWeather() {
+  const res = await fetch('https://api.weather.gov/gridpoints/MTR/74,121/forecast/hourly', {
+    headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' }
+  });
+  const cachedAt = res.headers.get('X-Cached-At');
+  if (!res.ok) throw new Error('NWS weather ' + res.status);
+  const data = await res.json();
+  const p = data.properties?.periods?.[0];
+  if (!p) throw new Error('No NWS periods');
+  return {
+    temp:          p.temperature,
+    windSpeed:     p.windSpeed     || '',
+    windDir:       p.windDirection || '',
+    shortForecast: p.shortForecast || '',
+    humidity:      p.relativeHumidity?.value ?? null,
+    cachedAt:      cachedAt ? +cachedAt : null,
+  };
+}
+
+// ============================================================
+// 511 SF BAY ROADS
+// ============================================================
+
+async function fetch511() {
+  const url = `https://api.511.org/traffic/events?api_key=${CONFIG.key511}&format=json`;
+  const res = await fetch(url);
+  const cachedAt = res.headers.get('X-Cached-At');
+  if (!res.ok) throw new Error('511 ' + res.status);
+  const raw = await res.json();
+  return { raw, cachedAt: cachedAt ? +cachedAt : null };
+}
+
+function matchRoad511(name, coords) {
+  const n = name.toLowerCase();
+  const lat = Array.isArray(coords) && coords.length >= 2 ? coords[1] : null;
+
+  for (const m of ROAD_MATCHERS) {
+    if (!m.kw.some(k => n.includes(k))) continue;
+    if (m.lat && lat !== null) {
+      const [lo, hi] = m.lat;
+      if (lat < lo || lat > hi) continue;
+    }
+    return m.id;
+  }
+  return null;
+}
+
+function parse511Roads(raw) {
+  const map = {};
+  const events = raw?.events || raw?.Events || [];
+  if (!Array.isArray(events)) return map;
+
+  for (const ev of events) {
+    const active = (ev.status || ev.Status || '').toLowerCase();
+    if (active === 'inactive' || active === 'closed') continue; // "closed" here = event closed, not road
+
+    const sev  = (ev.severity  || ev.Severity  || '').toLowerCase();
+    const type = (ev.event_type || ev.EventType || ev.type || '').toLowerCase();
+    const headline = ev.headline || ev.Headline || ev.description || '';
+
+    const isClosure = type.includes('clos') || sev.includes('major') || sev.includes('extreme');
+    const cls    = isClosure ? 'r' : 'a';
+    const status = isClosure ? 'Closed' : 'Caution';
+
+    const roads  = ev.roads  || ev.Roads  || [];
+    const coords = ev.geography?.coordinates || null;
+
+    const sources = Array.isArray(roads) && roads.length > 0 ? roads : [{ name: headline }];
+    for (const r of sources) {
+      const rname = r.name || r.Name || '';
+      const id = matchRoad511(rname, coords);
+      if (id && !map[id]) {
+        const detail = (r.from && r.to) ? `${r.from} → ${r.to}` : headline.slice(0, 42);
+        map[id] = { status, cls, detail };
+      }
+    }
+  }
+  return map;
+}
+
+// ============================================================
+// WFIGS ACTIVE FIRES  (NIFC interagency incidents, Marin bbox)
+// ============================================================
+
+async function fetchWFIGS() {
+  const bbox = '-123.1,37.75,-122.5,38.4';
+  const base = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Incident_Points_Current/FeatureServer/0/query';
+  const url  = `${base}?where=1%3D1` +
+    `&outFields=IncidentName%2CAcres%2CPercentContained%2CModifiedOnDateTime_dt` +
+    `&geometry=${encodeURIComponent(bbox)}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects` +
+    `&returnGeometry=false&f=json`;
+
+  const res = await fetch(url);
+  const cachedAt = res.headers.get('X-Cached-At');
+  if (!res.ok) throw new Error('WFIGS ' + res.status);
+  const data = await res.json();
+  const features = (data.features || []).filter(f => f.attributes);
+
+  if (!features.length) return { fire: null, cachedAt: cachedAt ? +cachedAt : null };
+
+  features.sort((a, b) =>
+    (b.attributes.ModifiedOnDateTime_dt || 0) - (a.attributes.ModifiedOnDateTime_dt || 0)
+  );
+  const a = features[0].attributes;
+  return {
+    fire: {
+      name:  a.IncidentName || 'Active fire',
+      acres: a.Acres != null ? Math.round(a.Acres) : '?',
+      pct:   a.PercentContained != null ? Math.round(a.PercentContained) : '?',
+      updAt: a.ModifiedOnDateTime_dt ? new Date(a.ModifiedOnDateTime_dt) : null,
+    },
+    cachedAt: cachedAt ? +cachedAt : null,
+  };
+}
+
+// ============================================================
+// STATE BUILDER
+// ============================================================
+
+function minsAgo(date) {
+  if (!date) return null;
+  const m = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (m < 60) return m + ' min ago';
+  return Math.floor(m / 60) + ' hr ago';
+}
+
+function timeNow() {
+  return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function wxEmoji(sf, windMph, level) {
+  if (level === 'alert') return '🔥';
+  const f = sf.toLowerCase();
+  const w = windMph || 0;
+  if (f.includes('thunder'))                              return '⛈️';
+  if (f.includes('rain') || f.includes('shower'))        return '🌧️';
+  if (f.includes('fog')  || f.includes('mist'))          return '🌫️';
+  if (f.includes('snow'))                                 return '❄️';
+  if (w > 20 || f.includes('breezy') || f.includes('windy')) return '🌬️';
+  if (f.includes('overcast') || f.includes('cloud'))     return '☁️';
+  if (f.includes('partly'))                               return '⛅';
+  return '☀️';
+}
+
+function buildState(nwsAlert, nwsWx, roads511, fire) {
+  // --- level ---
+  let level = nwsAlert?.level || 'calm';
+  if (fire) level = 'alert';
+
+  // --- pill ---
+  let pillTitle, pillSub;
+  if (fire) {
+    pillTitle = `Active fire — ${fire.name}`;
+    pillSub   = `${fire.acres} ac · ${fire.pct}% contained · ${minsAgo(fire.updAt) || timeNow()}`;
+  } else if (level === 'alert' && nwsAlert?.props) {
+    pillTitle = nwsAlert.props.event || 'Active alert';
+    pillSub   = `NWS CAZ505 · ${timeNow()}`;
+  } else if (level === 'watch' && nwsAlert?.props) {
+    const expires = nwsAlert.props.expires ? new Date(nwsAlert.props.expires) : null;
+    const exp = expires ? ' · until ' + expires.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+    pillTitle = nwsAlert.props.event || 'Fire weather watch';
+    pillSub   = `NWS CAZ505${exp}`;
+  } else {
+    pillTitle = 'All clear';
+    pillSub   = `Inverness · ${timeNow()}`;
+  }
+
+  // --- weather line ---
+  let wxIcon, wxText, wxWarn = (level !== 'calm');
+  const sf  = nwsWx?.shortForecast || '';
+  const mph = parseInt(nwsWx?.windSpeed) || 0;
+  const temp = nwsWx ? `${nwsWx.temp}°F` : '—';
+  const windSpeed = nwsWx?.windSpeed || '—';
+  const windDir   = nwsWx?.windDir   || '';
+  const wind      = windDir ? `${windDir} ${windSpeed}` : windSpeed;
+  const hum  = nwsWx?.humidity != null ? `${Math.round(nwsWx.humidity)}% humidity` : null;
+  wxIcon = wxEmoji(sf, mph, level);
+
+  if (level === 'alert') {
+    const ap = nwsAlert?.props;
+    const exp = ap?.expires ? 'until ' + new Date(ap.expires).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+    wxText = [`Red flag${exp ? ' ' + exp : ''}`, wind + ' gusts', hum].filter(Boolean).join(' · ');
+  } else {
+    wxText = [sf || '—', temp, wind].filter(Boolean).join(' · ');
+  }
+
+  // --- roads ---
+  const roads = ROADS.map(r => {
+    const ov = roads511[r.id];
+    return ov ? { ...r, ...ov } : { ...r, ...CLEAR };
+  });
+
+  // --- feeds ---
+  const feeds = {
+    '511':   { age: ageStr(fresh['511'].at),   state: dotState('511') },
+    'NWS':   { age: ageStr(fresh['NWS'].at),   state: dotState('NWS') },
+    'WFIGS': { age: ageStr(fresh['WFIGS'].at), state: dotState('WFIGS') },
+  };
+  const vals = Object.values(feeds);
+  const newestAge = Object.values(fresh).filter(f => f.at && f.ok).map(f => ageStr(f.at))[0] || '—';
+  const allLive = vals.every(f => f.state === 'live');
+  const anyOff  = vals.some(f => f.state === 'off');
+  const feedSummary = level === 'alert' ? null
+    : allLive ? `All feeds live · updated <b>${newestAge}</b>`
+    : anyOff  ? `⚠ Some feeds offline`
+    : 'Feeds updating…';
+
+  return { level, pillTitle, pillSub, wxIcon, wxText, wxWarn, roads, feeds, feedSummary };
+}
+
+// ============================================================
+// BLACKOUT RENDER — all three data sources unreachable × 2 cycles
+// ============================================================
+
+function renderUnknown() {
+  render({
+    level:     'unknown',
+    pillTitle: 'Status unknown',
+    pillSub:   'Feeds offline · call 911 for emergencies',
+    wxIcon:    '📡',
+    wxText:    'Unable to reach data feeds',
+    wxWarn:    false,
+    roads: ROADS.map(r => ({ ...r, status: '—', cls: '' })),
+    feeds: {
+      '511':   { age: ageStr(fresh['511'].at),   state: 'off' },
+      'NWS':   { age: ageStr(fresh['NWS'].at),   state: 'off' },
+      'WFIGS': { age: ageStr(fresh['WFIGS'].at), state: 'off' },
+    },
+    feedSummary: '⚠ All feeds offline · check your connection',
+  });
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+
+function render(d) {
+  const app  = document.getElementById('app');
+  const pill = document.getElementById('pill');
+  const tray = document.getElementById('pillTray');
+  const wasOpen = pill.classList.contains('is-open');
+
+  app.dataset.state = d.level;
+
+  // Weather
+  app.querySelector('.wx-line .icon').textContent = d.wxIcon;
+  const wxEl = document.getElementById('wxText');
+  if (d.wxWarn) {
+    const [first, ...rest] = d.wxText.split(' · ');
+    wxEl.innerHTML = `<b class="warn">${esc(first)}</b>${rest.length ? ' · ' + esc(rest.join(' · ')) : ''}`;
+  } else {
+    wxEl.textContent = d.wxText;
+  }
+
+  // Pill
+  pill.dataset.pill = d.level;
+  document.getElementById('pillTitle').textContent = d.pillTitle;
+  document.getElementById('pillSub').textContent   = d.pillSub;
+
+  // Tray
+  tray.dataset.tray = d.level;
+  document.getElementById('trayGrid').innerHTML = d.roads.map(r =>
+    `<div class="tray-row">
+       <span class="tray-road">${esc(r.label)}</span>
+       <span class="tray-status ${r.cls}">${esc(r.status)}</span>
+     </div>`
+  ).join('');
+
+  // Auto-open on alert (first time); preserve open state on refresh
+  if (d.level === 'alert' && !wasOpen) {
+    pill.classList.add('is-open');
+    pill.setAttribute('aria-expanded', 'true');
+    tray.classList.add('is-open');
+  }
+
+  // Feed footer
+  ['511','NWS','WFIGS'].forEach(src => {
+    document.getElementById(`dot${src}`).className = `feed-dot ${d.feeds[src].state}`;
+    document.getElementById(`age${src}`).textContent = d.feeds[src].age;
+  });
+  const sumEl = document.getElementById('feedSummary');
+  if (d.feedSummary) { sumEl.innerHTML = d.feedSummary; sumEl.style.display = ''; }
+  else               { sumEl.style.display = 'none'; }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ============================================================
+// PILL TAP
+// ============================================================
+
+document.getElementById('pill').addEventListener('click', () => {
+  const pill = document.getElementById('pill');
+  const tray = document.getElementById('pillTray');
+  const open = pill.classList.contains('is-open');
+  pill.classList.toggle('is-open', !open);
+  pill.setAttribute('aria-expanded', String(!open));
+  tray.classList.toggle('is-open', !open);
+});
+
+// ============================================================
+// LIVE REFRESH
+// ============================================================
+
+async function refresh() {
+  try {
+    const [rNWSAlert, rNWSWx, r511, rWFIGS] = await Promise.allSettled([
+      fetchNWSAlerts(),
+      fetchNWSWeather(),
+      fetch511().then(({ raw, cachedAt }) => ({ roads: parse511Roads(raw), cachedAt })),
+      fetchWFIGS(),
+    ]);
+
+    const nwsOk = rNWSAlert.status === 'fulfilled' && rNWSWx.status === 'fulfilled';
+    const nwsAt = rNWSAlert.value?.cachedAt ?? rNWSWx.value?.cachedAt ?? null;
+    markFresh('NWS',   nwsOk, nwsAt ?? Date.now());
+    markFresh('511',   r511.status   === 'fulfilled', r511.value?.cachedAt   ?? Date.now());
+    markFresh('WFIGS', rWFIGS.status === 'fulfilled', rWFIGS.value?.cachedAt ?? Date.now());
+
+    // Blackout detection: all three data sources failed this cycle
+    const allFailed = !nwsOk && r511.status === 'rejected' && rWFIGS.status === 'rejected';
+    failedCycles = allFailed ? failedCycles + 1 : 0;
+
+    if (failedCycles >= 2) {
+      renderUnknown();
+    } else {
+      const state = buildState(
+        rNWSAlert.status === 'fulfilled' ? rNWSAlert.value    : null,
+        rNWSWx.status    === 'fulfilled' ? rNWSWx.value       : null,
+        r511.status      === 'fulfilled' ? r511.value.roads   : {},
+        rWFIGS.status    === 'fulfilled' ? rWFIGS.value?.fire : null,
+      );
+      currentLevel = state.level;
+      render(state);
+    }
+
+    // Sync dev bar: mark Live button active
+    document.querySelectorAll('.dev-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.s === 'live')
+    );
+  } finally {
+    scheduleNext();
+  }
+}
+
+// ============================================================
+// DEV SWITCHER
+// ============================================================
+
+document.querySelectorAll('.dev-btn').forEach(btn =>
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dev-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (btn.dataset.s === 'live') { clearTimeout(refreshTimer); refresh(); return; }
+    render(MOCK[btn.dataset.s]);
+  })
+);
+
+// ============================================================
+// REPORT STALE — Phase 5 wires full mailto flow
+// ============================================================
+
+document.getElementById('reportLink').addEventListener('click', e => {
+  e.preventDefault();
+  alert('Report stale data — coming in Phase 5');
+});
+
+// ============================================================
+// INIT
+// ============================================================
+
+refresh(); // scheduleNext() inside chains all future polls
+
+// ============================================================
+// SERVICE WORKER
+// ============================================================
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(err =>
+    console.warn('SW registration failed:', err)
+  );
+}
+</script>
+</body>
+</html>

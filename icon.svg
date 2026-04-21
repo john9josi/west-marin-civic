@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1D3A2F"/>
+  <text x="256" y="248"
+    text-anchor="middle"
+    font-family="system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif"
+    font-weight="800" font-size="172" letter-spacing="-4"
+    fill="#F4F2EE">WM</text>
+  <text x="256" y="364"
+    text-anchor="middle"
+    font-family="system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif"
+    font-weight="700" font-size="100" letter-spacing="10"
+    fill="#3B7A9E">CIVIC</text>
+</svg>

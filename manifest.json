@@ -1,0 +1,15 @@
+{
+  "name": "West Marin Civic",
+  "short_name": "WMC",
+  "description": "Emergency status and road conditions for Point Reyes, Inverness, and the West Marin coast.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F4F2EE",
+  "theme_color": "#1D3A2F",
+  "orientation": "portrait-primary",
+  "categories": ["utilities", "navigation"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
