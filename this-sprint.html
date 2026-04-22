@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>This Sprint — West Marin Civic</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 24px 60px; color: #1a1a1a; background: #f9f8f6; }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .meta { font-size: 13px; color: #888; margin-bottom: 32px; }
+    .meta a { color: #1a6b3c; text-decoration: none; }
+    h2 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #888; margin: 28px 0 10px; }
+    .card { background: #fff; border-radius: 10px; border: 1px solid #e8e5e0; padding: 16px 18px; margin-bottom: 12px; }
+    .card-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .card-title a { color: #1a1a1a; text-decoration: none; }
+    .card-title a:hover { text-decoration: underline; }
+    .card-meta { font-size: 12px; color: #888; margin-bottom: 10px; }
+    .card-body { font-size: 13px; color: #444; line-height: 1.6; }
+    .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-right: 6px; }
+    .tag-s { background: #e6f4ec; color: #1a6b3c; }
+    .tag-m { background: #fff3e0; color: #b45309; }
+    .tag-l { background: #fde8e8; color: #b91c1c; }
+    .status-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+    .pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .pill-green { background: #e6f4ec; color: #1a6b3c; }
+    .pill-yellow { background: #fff3e0; color: #b45309; }
+    .retro { background: #f0f4ff; border: 1px solid #c7d7f5; border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #374151; margin-bottom: 12px; }
+    .blocker { background: #fff8e6; border: 1px solid #f5d87c; border-radius: 10px; padding: 14px 16px; font-size: 13px; color: #7c5e10; margin-top: 28px; }
+    .cta { display: inline-block; margin-top: 24px; background: #1a6b3c; color: #fff; padding: 11px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; }
+    .cta:hover { background: #145c33; }
+    .staging { display: inline-block; margin-top: 10px; margin-left: 10px; background: #fff; border: 1px solid #c8d5c0; color: #1a6b3c; padding: 11px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; }
+    .staging:hover { background: #f0f4f0; }
+  </style>
+</head>
+<body>
+
+  <h1>This Sprint</h1>
+  <p class="meta">
+    Sprint 2026-04-22 ·
+    <a href="https://github.com/john9josi/west-marin-civic/pull/13" target="_blank">PR #13</a> ·
+    Built by Usain
+  </p>
+
+  <h2>Retro</h2>
+  <div class="retro">Clean. No automated issues, no stale sprint branches.</div>
+
+  <h2>Backlog Health</h2>
+  <div class="retro">Healthy. 6 S-effort issues remain. Only one L-effort issue (#8 push notifications). No vague or under-specced issues.</div>
+
+  <h2>Issues This Sprint</h2>
+
+  <div class="card">
+    <div class="status-row">
+      <span class="tag tag-m">M</span>
+      <span class="pill pill-yellow">In progress</span>
+    </div>
+    <div class="card-title">
+      <a href="https://github.com/john9josi/west-marin-civic/issues/2" target="_blank">#2 — Evacuation zones</a>
+    </div>
+    <div class="card-meta">Show active Marin County zones during alerts</div>
+    <div class="card-body">
+      New <code>fetchMarinEvacZones()</code> calling Marin County ArcGIS/OES API. New section rendered below Contacts tray in alert state with zone name + status (Warning/Order).
+      <br><br>
+      <strong>Why:</strong> The single most impactful safety feature missing. During a fire, evac zone status is the #1 thing residents need.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="status-row">
+      <span class="tag tag-s">S</span>
+      <span class="pill pill-yellow">In progress</span>
+    </div>
+    <div class="card-title">
+      <a href="https://github.com/john9josi/west-marin-civic/issues/4" target="_blank">#4 — Feed freshness on pill</a>
+    </div>
+    <div class="card-meta">Show data age at a glance during alert</div>
+    <div class="card-body">
+      Modify <code>buildState()</code> to compute age of newest live feed. Append <em>· updated Xm ago</em> to pill subtitle when state is alert and newest feed age &gt; 2 min.
+      <br><br>
+      <strong>Why:</strong> During an alert, users have no way to gauge data freshness without scrolling to the feed footer.
+    </div>
+  </div>
+
+  <div class="blocker">
+    ⚠️ <strong>Blocker (non-blocking):</strong> Gmail MCP disconnected after OAuth handshake — plan email not sent. Retro ran on GitHub signals only. Will retry next cycle.
+  </div>
+
+  <br>
+  <a class="cta" href="https://github.com/john9josi/west-marin-civic/pulls" target="_blank">Review on GitHub →</a>
+  <a class="staging" href="https://west-marin-civic.john-b98.workers.dev" target="_blank">View Staging →</a>
+
+</body>
+</html>
