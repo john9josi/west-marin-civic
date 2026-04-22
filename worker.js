@@ -78,6 +78,15 @@ export default {
       }
 
       if (request.method === 'GET') {
+        // Approve action via GET shows a confirmation page to prevent prefetch auto-approval
+        if (action === 'approve') {
+          const issues = (state.issues || []).map(i => `<li>#${i.number} — ${i.title}</li>`).join('');
+          const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Approve Sprint — West Marin Civic</title><style>body{font-family:-apple-system,sans-serif;max-width:480px;margin:60px auto;padding:0 24px;color:#1a1a1a}h2{font-size:18px;margin-bottom:8px}ul{padding-left:20px;margin:12px 0}form{margin-top:24px}button{background:#1a6b3c;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:15px;cursor:pointer;width:100%}button:hover{background:#145c33}.warn{font-size:13px;color:#666;margin-top:12px}</style></head><body><h2>Approve this sprint?</h2><p>The following issues will be built on Wednesday 8am PT:</p><ul>${issues || '<li>No issues loaded</li>'}</ul><form method="POST" action="/api/sprint?token=${token}&action=approve"><button type="submit">Approve — start building</button></form><p class="warn">This will greenlight Usain to implement these issues and deploy to staging.</p></body></html>`;
+          return new Response(html, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          });
+        }
+
         return new Response(JSON.stringify(state), {
           headers: { ...CORS, 'Content-Type': 'application/json' },
         });

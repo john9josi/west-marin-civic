@@ -58,6 +58,7 @@ body {
 
 .app {
   max-width: 480px;
+  width: 100%;
   margin: 0 auto;
   min-height: 100vh;
   min-height: 100dvh;
@@ -213,7 +214,7 @@ body {
 
 /* ------------------------------------------------------------------ FEED FOOTER */
 .feed-footer { margin-top: 24px; padding-top: 12px; border-top: 0.5px solid var(--sand); }
-.feed-row { display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: var(--ghost); letter-spacing: .04em; }
+.feed-row { display: grid; grid-template-columns: auto auto; gap: 5px 24px; font-size: 9px; color: var(--ghost); letter-spacing: .04em; justify-content: center; }
 .feed-src { display: inline-flex; align-items: center; gap: 5px; }
 .feed-src b { font-weight: 700; color: var(--forest); }
 .feed-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
@@ -323,7 +324,7 @@ body {
     <div class="wordmark">West Marin <em>Civic</em></div>
     <div class="nav-links" role="tablist">
       <button class="nav-tab emg active" data-tab="home" role="tab" aria-selected="true">Emergency</button>
-      <button class="nav-tab" data-tab="more" role="tab" aria-selected="false">More</button>
+      <button class="nav-tab" data-tab="more" role="tab" aria-selected="false">About</button>
     </div>
   </nav>
 
@@ -386,7 +387,7 @@ body {
     <!-- From West Marin Civic -->
     <div class="hide-alert">
       <div class="section-head">From West Marin Civic</div>
-      <div class="from-card">West Marin Civic builds digital infrastructure to keep West Marin safe, starting with local road closures and emergencies. <a href="#" class="from-card-link" data-tab="more">See our More page.</a></div>
+      <div class="from-card">West Marin Civic builds digital infrastructure to keep West Marin safe, starting with local road closures and emergencies. <a href="#" class="from-card-link" data-tab="more">See our About page.</a></div>
     </div>
 
     <!-- Feed footer -->
@@ -404,10 +405,6 @@ body {
       <a class="report-link" id="reportLink" href="#">Report stale data</a>
     </div>
 
-    <div class="pge-row">
-      <a class="pge-link" href="https://pgealerts.alerts.pge.com/?WT.mc_id=Vanity_outages" target="_blank" rel="noopener">Sign up for PG&amp;E outage alerts →</a>
-    </div>
-
   </main>
 
   <main class="main page" id="page-more">
@@ -415,18 +412,18 @@ body {
     <div class="section-head">About</div>
     <p class="about-body">West Marin Civic is built by and built for those of us on this side of the hill. We're building the digital infrastructure to keep West Marin safe, starting with local road closures and emergencies.</p>
     <p class="about-body" style="margin-top:14px;">We don't have a profit incentive. We don't want to capitalize on crisis. We're just having fun and doing good.</p>
-    <p class="about-body" style="margin-top:14px;">Please donate to our coffee fund (read: pay for server costs).</p>
-    <p class="about-body" style="margin-top:14px;">And, if you want to go all out and max your contributions, tell a friend or a neighbor about us. The more of us using West Marin Civic, the better off we will all be.</p>
+    <p class="about-body" style="margin-top:14px;">If this is useful to you, support it. Donations go directly to keeping the lights on.</p>
+    <p class="about-body" style="margin-top:14px;">And the best thing you can do is tell a friend or a neighbor. The more of us using West Marin Civic, the better off we all are.</p>
 
-    <div style="margin-top:16px;">
+    <div class="cta-row" style="margin-top:16px;">
       <a class="cta-btn primary" href="https://buymeacoffee.com/westmarincivic" target="_blank" rel="noopener">
-        <span class="cta-icon">☕</span>Donate to coffee fund
+        <span class="cta-icon">☕</span>Donate
+      </a>
+      <a class="cta-btn secondary" href="mailto:hello@westmarincivic.org?subject=West%20Marin%20Civic%20Feedback">
+        <span class="cta-icon">✉</span>Share your 2 cents
       </a>
     </div>
 
-    <div class="section-head" style="margin-top:28px;">Feedback</div>
-    <p class="feedback-body">Your feedback tells us what's broken and what we could add to make life a little easier around here.</p>
-    <a class="feedback-link" href="mailto:hello@westmarincivic.org?subject=West%20Marin%20Civic%20Feedback">Share your 2 cents →</a>
 
   </main>
 
