@@ -5,6 +5,9 @@ on:
     - cron: '0 */6 * * *'  # every 6 hours
   workflow_dispatch:         # manual trigger
 
+permissions:
+  issues: write
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -45,8 +48,10 @@ jobs:
 
       - name: Check /api/sprint endpoint
         id: sprint
+        env:
+          SPRINT_TOKEN: ${{ secrets.SPRINT_TOKEN }}
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://westmarincivic.org/api/sprint?token=${{ secrets.SPRINT_TOKEN }}")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://westmarincivic.org/api/sprint?token=${SPRINT_TOKEN}")
           echo "status=$STATUS" >> $GITHUB_OUTPUT
           if [ "$STATUS" != "200" ]; then
             echo "FAIL: /api/sprint returned $STATUS"
