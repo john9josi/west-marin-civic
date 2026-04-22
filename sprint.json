@@ -1,5 +1,5 @@
 {
-  "sprint_active": false,
+  "sprint_active": true,
   "sprint_start": "2026-04-22",
   "issues": [
     {"number": 2, "title": "Evacuation zones — show active Marin County zones during alerts"},
