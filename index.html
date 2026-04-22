@@ -566,8 +566,7 @@ async function fetchNWSWeather() {
 // ============================================================
 
 async function fetch511() {
-  const url = `https://api.511.org/traffic/events?api_key=${CONFIG.key511}&format=json`;
-  const res = await fetch(url);
+  const res = await fetch('/api/511');
   const cachedAt = res.headers.get('X-Cached-At');
   if (!res.ok) throw new Error('511 ' + res.status);
   const raw = await res.json();
