@@ -314,6 +314,50 @@ body {
   cursor: pointer; letter-spacing: .05em; text-transform: uppercase; transition: all .15s;
 }
 .dev-btn.active { background: #fff; color: var(--forest); border-color: transparent; }
+.dev-btn.sprint-active { background: rgba(255,255,255,.18); color: #fff; }
+
+/* Sprint panel */
+.sprint-panel {
+  display: none;
+  position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+  width: min(480px, calc(100vw - 32px));
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  z-index: 998; overflow: hidden;
+  max-height: calc(100dvh - 120px); overflow-y: auto;
+}
+.sprint-panel.is-open { display: block; }
+.sprint-panel-head {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #888;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.sprint-panel-close {
+  background: none; border: none; cursor: pointer; font-size: 18px; color: #aaa; padding: 0 2px; line-height: 1;
+}
+.sprint-panel-close:hover { color: #444; }
+.sprint-panel-body { padding: 14px 16px 20px; }
+.sprint-section-head { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #aaa; margin: 16px 0 8px; }
+.sprint-section-head:first-child { margin-top: 0; }
+.sprint-retro { font-size: 13px; color: #555; background: #f5f5f3; border-radius: 8px; padding: 10px 12px; margin-bottom: 4px; }
+.sprint-issue { border: 1px solid #eee; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+.sprint-issue-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.sprint-issue-title a { color: #1a1a1a; text-decoration: none; }
+.sprint-issue-title a:hover { text-decoration: underline; }
+.sprint-issue-meta { font-size: 11px; color: #aaa; margin-bottom: 8px; }
+.sprint-issue-body { font-size: 13px; color: #555; line-height: 1.5; }
+.sprint-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; margin-right: 6px; }
+.sprint-tag-s { background: #e6f4ec; color: #1a6b3c; }
+.sprint-tag-m { background: #fff3e0; color: #b45309; }
+.sprint-tag-l { background: #fde8e8; color: #b91c1c; }
+.sprint-actions { display: flex; gap: 8px; margin-top: 16px; }
+.sprint-action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.sprint-action-primary { background: #1a6b3c; color: #fff; }
+.sprint-action-primary:hover { background: #145c33; }
+.sprint-action-secondary { background: #f0f4f0; color: #1a6b3c; border: 1px solid #c8d5c0; }
+.sprint-action-secondary:hover { background: #e4ede4; }
+.sprint-blocker { background: #fff8e6; border: 1px solid #f5d87c; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #7c5e10; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -429,6 +473,47 @@ body {
 
 </div>
 
+<div class="sprint-panel" id="sprintPanel">
+  <div class="sprint-panel-head">
+    This Sprint
+    <button class="sprint-panel-close" id="sprintPanelClose" aria-label="Close">×</button>
+  </div>
+  <div class="sprint-panel-body" id="sprintPanelBody">
+    <div class="sprint-section-head">Retro</div>
+    <div class="sprint-retro">Clean. No automated issues, no stale sprint branches.</div>
+
+    <div class="sprint-section-head">Backlog Health</div>
+    <div class="sprint-retro">Healthy. 6 S-effort issues remain. No vague or under-specced issues.</div>
+
+    <div class="sprint-section-head">Issues This Sprint</div>
+
+    <div class="sprint-issue">
+      <div class="sprint-issue-title">
+        <span class="sprint-tag sprint-tag-m">M</span>
+        <a href="https://github.com/john9josi/west-marin-civic/issues/2" target="_blank">#2 — Evacuation zones</a>
+      </div>
+      <div class="sprint-issue-meta">Show active Marin County zones during alerts · alert state only</div>
+      <div class="sprint-issue-body">New section below Contacts tray in alert state showing zone name + status (Warning/Order) from Marin County ArcGIS/OES API. Switch to Alert state to preview.</div>
+    </div>
+
+    <div class="sprint-issue">
+      <div class="sprint-issue-title">
+        <span class="sprint-tag sprint-tag-s">S</span>
+        <a href="https://github.com/john9josi/west-marin-civic/issues/4" target="_blank">#4 — Feed freshness on pill</a>
+      </div>
+      <div class="sprint-issue-meta">Show data age during alert · alert state only</div>
+      <div class="sprint-issue-body">Pill subtitle shows <em>· updated Xm ago</em> when state is alert and newest feed age &gt; 2 min. Switch to Alert state to preview.</div>
+    </div>
+
+    <div class="sprint-blocker">⚠️ Gmail MCP disconnected after OAuth — plan email not sent this cycle. Will retry next sprint.</div>
+
+    <div class="sprint-actions">
+      <a class="sprint-action-btn sprint-action-primary" href="https://github.com/john9josi/west-marin-civic/pulls" target="_blank">Review PR →</a>
+      <a class="sprint-action-btn sprint-action-secondary" href="https://west-marin-civic.john-b98.workers.dev" target="_blank">Staging →</a>
+    </div>
+  </div>
+</div>
+
 <div class="dev-bar" aria-hidden="true">
   <button class="dev-btn" data-s="calm">Calm</button>
   <button class="dev-btn" data-s="calm_outage">Outage</button>
@@ -436,7 +521,7 @@ body {
   <button class="dev-btn" data-s="alert">Alert</button>
   <button class="dev-btn" data-s="unknown">Unknown</button>
   <button class="dev-btn active" data-s="live">Live</button>
-  <a class="dev-btn" href="/this-sprint.html" target="_blank">This Sprint</a>
+  <button class="dev-btn" id="sprintPanelBtn">This Sprint</button>
 </div>
 
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "70cf1c1b3dfb488ebb15f72a23c202f3"}'></script>
@@ -1060,6 +1145,32 @@ document.querySelectorAll('.dev-btn').forEach(btn =>
     if (mock.pge) fresh['PGE'] = { at: Date.now(), ok: true };
     render(mock);
     fresh['PGE'] = prevPGE;
+  })
+);
+
+// ============================================================
+// THIS SPRINT PANEL
+// ============================================================
+
+const sprintPanel = document.getElementById('sprintPanel');
+const sprintPanelBtn = document.getElementById('sprintPanelBtn');
+const sprintPanelClose = document.getElementById('sprintPanelClose');
+
+sprintPanelBtn.addEventListener('click', () => {
+  const isOpen = sprintPanel.classList.toggle('is-open');
+  sprintPanelBtn.classList.toggle('sprint-active', isOpen);
+});
+
+sprintPanelClose.addEventListener('click', () => {
+  sprintPanel.classList.remove('is-open');
+  sprintPanelBtn.classList.remove('sprint-active');
+});
+
+// Close panel when switching states so UI is unobstructed
+document.querySelectorAll('.dev-btn[data-s]').forEach(btn =>
+  btn.addEventListener('click', () => {
+    sprintPanel.classList.remove('is-open');
+    sprintPanelBtn.classList.remove('sprint-active');
   })
 );
 

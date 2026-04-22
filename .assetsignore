@@ -3,3 +3,6 @@
 .wrangler/
 *.map
 node_modules/
+this-sprint.html
+outage-options.html
+preview.html
