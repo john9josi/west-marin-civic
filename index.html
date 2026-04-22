@@ -242,6 +242,17 @@ body {
 [data-state="unknown"] .only-alert { display: block; }
 [data-state="unknown"] .hide-alert { display: none; }
 
+/* ------------------------------------------------------------------ EVAC ZONES */
+.evac-zone-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 12px; margin-bottom: 6px; border-radius: 8px; font-size: 14px;
+}
+.evac-zone-row.order   { background: rgba(185,28,28,.08); border: 0.5px solid rgba(185,28,28,.22); }
+.evac-zone-row.warning { background: rgba(146,64,14,.07); border: 0.5px solid rgba(146,64,14,.20); }
+.evac-zone-name { font-weight: 600; color: var(--forest); }
+.evac-zone-status.order   { color: var(--red);   font-weight: 700; font-size: 13px; }
+.evac-zone-status.warning { color: var(--amber); font-weight: 700; font-size: 13px; }
+
 /* ------------------------------------------------------------------ MORE PAGE */
 .page { display: none; }
 .page.is-active { display: block; }
@@ -382,6 +393,12 @@ body {
         <span class="call-icon" aria-hidden="true">☎</span>
         <span><span class="call-label">Marin Fire Hotline</span><span class="call-sub" style="display:block">(415) 473-7191</span></span>
       </a>
+    </div>
+
+    <!-- Evacuation zones (alert only) -->
+    <div class="only-alert" id="evacSection">
+      <div class="section-head">Evacuation zones</div>
+      <div id="evacZones"></div>
     </div>
 
     <!-- From West Marin Civic -->
@@ -534,6 +551,10 @@ const MOCK = {
     ],
     feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'2m',state:'live'}, 'WFIGS':{age:'12m',state:'live'}, 'PGE':{age:'2m',state:'live'} },
     feedSummary: null,
+    evacZones: [
+      { zone: 'Zone D – Inverness Ridge', status: 'Evacuation Order' },
+      { zone: 'Zone C – Point Reyes Station', status: 'Evacuation Warning' },
+    ],
   },
   unknown: {
     level: 'unknown', pillTitle: 'Status unknown', pillSub: 'Feeds offline · call 911 for emergencies',
@@ -761,6 +782,28 @@ async function fetchPGE() {
 }
 
 // ============================================================
+// MARIN COUNTY EVACUATION ZONES  (OES ArcGIS, West Marin bbox)
+// ============================================================
+
+async function fetchMarinEvacZones() {
+  const bbox = '-123.05,37.85,-122.55,38.30';
+  const url = 'https://services1.arcgis.com/LFLkq1dYAIHQYMdA/arcgis/rest/services' +
+    '/Evacuation_Zones/FeatureServer/0/query' +
+    '?where=1%3D1&outFields=ZoneName%2CStatus' +
+    `&geometry=${encodeURIComponent(bbox)}&geometryType=esriGeometryEnvelope` +
+    '&inSR=4326&spatialRel=esriSpatialRelIntersects&returnGeometry=false&f=json';
+  const res = await fetchWithTimeout(url);
+  if (!res.ok) throw new Error('EvacZones ' + res.status);
+  const data = await res.json();
+  return (data.features || [])
+    .map(f => ({
+      zone:   f.attributes?.ZoneName || f.attributes?.Zone || 'Zone',
+      status: f.attributes?.Status   || 'Warning',
+    }))
+    .filter(z => { const s = z.status.toLowerCase(); return s.includes('warning') || s.includes('order'); });
+}
+
+// ============================================================
 // STATE BUILDER
 // ============================================================
 
@@ -794,6 +837,10 @@ function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge) {
   let level = nwsAlert?.level || 'calm';
   if (fire) level = 'alert';
 
+  // --- newest live feed age (used for pill freshness suffix + feedSummary) ---
+  const freshFeeds = Object.values(fresh).filter(f => f.at && f.ok).sort((a, b) => b.at - a.at);
+  const newestFeedAt = freshFeeds[0]?.at ?? null;
+
   // --- pill ---
   let pillTitle, pillSub;
   if (fire) {
@@ -810,6 +857,10 @@ function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge) {
   } else {
     pillTitle = 'All clear';
     pillSub   = `Inverness · ${timeNow()}`;
+  }
+
+  if (level === 'alert' && newestFeedAt !== null && Date.now() - newestFeedAt > 2 * 60_000) {
+    pillSub += ` · updated ${ageStr(newestFeedAt)}`;
   }
 
   // --- weather line ---
@@ -846,7 +897,7 @@ function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge) {
     'PGE':   { age: ageStr(fresh['PGE'].at),   state: dotState('PGE') },
   };
   const vals = Object.values(feeds);
-  const newestAge = Object.values(fresh).filter(f => f.at && f.ok).map(f => ageStr(f.at))[0] || '—';
+  const newestAge = newestFeedAt ? ageStr(newestFeedAt) : '—';
   const allLive = vals.every(f => f.state === 'live');
   const anyOff  = vals.some(f => f.state === 'off');
   const feedSummary = level === 'alert' ? null
@@ -878,6 +929,23 @@ function renderUnknown() {
     },
     feedSummary: '⚠ All feeds offline · check your connection',
   });
+}
+
+// ============================================================
+// EVAC ZONE RENDER
+// ============================================================
+
+function renderEvacZones(zones) {
+  const el = document.getElementById('evacZones');
+  if (!zones || !zones.length) { el.innerHTML = ''; return; }
+  el.innerHTML = zones.map(z => {
+    const isOrder = z.status.toLowerCase().includes('order');
+    const cls = isOrder ? 'order' : 'warning';
+    return `<div class="evac-zone-row ${cls}">
+      <span class="evac-zone-name">${esc(z.zone)}</span>
+      <span class="evac-zone-status ${cls}">${esc(z.status)}</span>
+    </div>`;
+  }).join('');
 }
 
 // ============================================================
@@ -990,12 +1058,13 @@ document.getElementById('pill').addEventListener('click', () => {
 
 async function refresh() {
   try {
-    const [rNWSAlert, rNWSWx, r511, rWFIGS, rPGE] = await Promise.allSettled([
+    const [rNWSAlert, rNWSWx, r511, rWFIGS, rPGE, rEvac] = await Promise.allSettled([
       fetchNWSAlerts(),
       fetchNWSWeather(),
       fetch511().then(({ raw, cachedAt }) => ({ roads: parse511Roads(raw), cachedAt })),
       fetchWFIGS(),
       fetchPGE(),
+      fetchMarinEvacZones(),
     ]);
 
     const nwsOk = rNWSAlert.status === 'fulfilled' && rNWSWx.status === 'fulfilled';
@@ -1023,6 +1092,7 @@ async function refresh() {
       );
       currentLevel = state.level;
       render(state);
+      renderEvacZones(rEvac.status === 'fulfilled' ? rEvac.value : []);
     }
 
     // Sync dev bar: mark Live button active
@@ -1048,6 +1118,7 @@ document.querySelectorAll('.dev-btn').forEach(btn =>
     const prevPGE = fresh['PGE'];
     if (mock.pge) fresh['PGE'] = { at: Date.now(), ok: true };
     render(mock);
+    renderEvacZones(mock.evacZones || []);
     fresh['PGE'] = prevPGE;
   })
 );
