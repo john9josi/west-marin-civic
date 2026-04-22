@@ -6,7 +6,7 @@ SUBJECT="${1:?Usage: send_email.sh <subject> <body>}"
 BODY="${2:?Usage: send_email.sh <subject> <body>}"
 
 TO="${SPRINT_EMAIL_TO:-john.p.josi@gmail.com}"
-FROM="${SPRINT_EMAIL_FROM:-john@equanimity.is}"
+FROM="${SPRINT_EMAIL_FROM:-hello@westmarincivic.org}"
 
 payload=$(jq -n \
   --arg to "$TO" \
