@@ -19,13 +19,7 @@ jobs:
         run: |
           DATE=$(jq -r '.sprint_start' sprint.json)
           ISSUES=$(jq -r '[.issues[] | "- #\(.number): \(.title)"] | join("\n")' sprint.json)
-          BODY="Sprint plan ready for your approval.
-
-Issues this sprint:
-$ISSUES
-
-Review and approve at: https://github.com/${{ github.repository }}/pulls
-Once merged the build will run automatically."
+          BODY=$(printf "Sprint plan ready for your approval.\n\nIssues this sprint:\n%s\n\nReview and approve at: https://github.com/${{ github.repository }}/pulls\nOnce merged the build will run automatically." "$ISSUES")
           bash send_email.sh "WMC Sprint Plan - $DATE" "$BODY"
 
       - name: Send review email
@@ -35,14 +29,5 @@ Once merged the build will run automatically."
         run: |
           DATE=$(jq -r '.sprint_start' sprint.json)
           ISSUES=$(jq -r '[.issues[] | "- #\(.number): \(.title)"] | join("\n")' sprint.json)
-          BRANCH="${{ github.ref_name }}"
-          BODY="Sprint built and ready for review.
-
-Built this sprint:
-$ISSUES
-
-Branch: https://github.com/${{ github.repository }}/tree/$BRANCH
-Staging: https://west-marin-civic.john-b98.workers.dev
-
-To ship: merge the sprint branch at https://github.com/${{ github.repository }}/pulls"
+          BODY=$(printf "Sprint built and ready for review.\n\nBuilt this sprint:\n%s\n\nBranch: https://github.com/${{ github.repository }}/tree/${{ github.ref_name }}\nStaging: https://west-marin-civic.john-b98.workers.dev\n\nTo ship: merge the sprint branch at https://github.com/${{ github.repository }}/pulls" "$ISSUES")
           bash send_email.sh "WMC Sprint Ready for Review - $DATE" "$BODY"
