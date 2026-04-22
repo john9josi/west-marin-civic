@@ -198,6 +198,42 @@ body {
 [data-state="unknown"] .only-alert { display: block; }
 [data-state="unknown"] .hide-alert { display: none; }
 
+/* ------------------------------------------------------------------ MORE PAGE */
+.page { display: none; }
+.page.is-active { display: block; }
+
+.about-body { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 0; }
+
+.cta-row { display: flex; gap: 10px; margin-top: 4px; }
+.cta-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 13px 12px; border-radius: 8px; text-decoration: none;
+  font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1.2;
+  -webkit-tap-highlight-color: transparent; transition: opacity .15s; text-align: center;
+}
+.cta-btn:active { opacity: .8; }
+.cta-btn.primary { background: var(--forest); color: #fff; }
+.cta-btn.secondary { background: var(--white); border: 0.5px solid var(--sand); color: var(--forest); }
+.cta-icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
+
+.feedback-body { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; }
+.feedback-link {
+  display: block; text-align: center; padding: 13px; border-radius: 8px;
+  background: var(--white); border: 0.5px solid var(--sand);
+  font-size: 13px; font-weight: 700; color: var(--forest); text-decoration: none;
+  -webkit-tap-highlight-color: transparent; transition: opacity .15s;
+}
+.feedback-link:active { opacity: .8; }
+
+/* ------------------------------------------------------------------ NAV TABS */
+.nav-tab {
+  font-size: 12px; color: var(--muted); cursor: pointer;
+  padding: 2px 0; border-bottom: 1.5px solid transparent;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.nav-tab.active { color: var(--forest); font-weight: 600; border-bottom-color: var(--forest); }
+.nav-tab.emg { color: var(--red); font-weight: 600; }
+
 /* ------------------------------------------------------------------ DEV SWITCHER */
 .dev-bar {
   position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
@@ -221,10 +257,13 @@ body {
 
   <nav class="nav">
     <div class="wordmark">West Marin <em>Civic</em></div>
-    <div class="nav-links"><span class="emg">Emergency</span><span>More</span></div>
+    <div class="nav-links">
+      <span class="nav-tab emg active" data-tab="home">Emergency</span>
+      <span class="nav-tab" data-tab="more">More</span>
+    </div>
   </nav>
 
-  <main class="main">
+  <main class="main page is-active" id="page-home">
 
     <div class="status-tag">Emergency status</div>
     <div class="status-disc">Serving Point Reyes · Inverness · Inverness Park</div>
@@ -300,6 +339,27 @@ body {
     </div>
 
   </main>
+
+  <main class="main page" id="page-more">
+
+    <div class="section-head">About</div>
+    <p class="about-body">West Marin Civic is built by and built for those of us on this side of the hill. We want to create a reliable and accessible center for critical information, starting with local road closures and emergencies.</p>
+
+    <div class="cta-row" style="margin-top:16px;">
+      <a class="cta-btn primary" href="https://buymeacoffee.com/westmarincivic" target="_blank" rel="noopener">
+        <span class="cta-icon">☕</span>Keep me in the know
+      </a>
+      <a class="cta-btn secondary" href="https://buymeacoffee.com/westmarincivic" target="_blank" rel="noopener">
+        <span class="cta-icon">💛</span>Donate for lattes
+      </a>
+    </div>
+
+    <div class="section-head" style="margin-top:28px;">Feedback</div>
+    <p class="feedback-body">Your feedback tells us what's broken and what we could add to make life a little easier around here.</p>
+    <a class="feedback-link" href="mailto:john@equanimity.is?subject=West%20Marin%20Civic%20Feedback">My 2 cents →</a>
+
+  </main>
+
 </div>
 
 <div class="dev-bar" aria-hidden="true">
@@ -834,6 +894,21 @@ document.getElementById('reportLink').addEventListener('click', e => {
 // ============================================================
 
 refresh(); // scheduleNext() inside chains all future polls
+
+// ============================================================
+// NAV TABS
+// ============================================================
+
+document.querySelectorAll('.nav-tab').forEach(tab =>
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.page').forEach(p =>
+      p.classList.toggle('is-active', p.id === 'page-' + target)
+    );
+  })
+);
 
 // ============================================================
 // SERVICE WORKER
