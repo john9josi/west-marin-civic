@@ -146,13 +146,13 @@ body {
 .tray[data-tray="alert"]   .tray-inner { border-color: rgba(185,28,28,.2);  background: rgba(185,28,28,.04); }
 .tray[data-tray="unknown"] .tray-inner { border-color: rgba(194,65,12,.2);  background: rgba(194,65,12,.04); }
 
-.tray-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.tray-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
 .tray-row {
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 6px; font-size: 13px; padding: 7px 0;
   border-bottom: 0.5px solid rgba(0,0,0,.06);
 }
-.tray-row:nth-last-child(-n+2) { border-bottom: none; }
+.tray-row:last-child { border-bottom: none; }
 .tray-road  { color: var(--muted); min-width: 0; flex-shrink: 1; }
 .tray-road-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tray-road-detail { display: block; font-size: 11px; color: var(--ghost); margin-top: 1px; white-space: normal; line-height: 1.3; }
@@ -440,20 +440,31 @@ const ROADS = [
   { id: 'vf',     label: 'Valley Ford',     detail: 'Valley Ford Rd' },
 ];
 
-// Keyword matchers for 511 event road names → road IDs
+// West Marin bounding box — all 511 events must fall within this to be shown
+// Roughly: Stinson Beach north to Tomales, Nicasio east to coast
+const WM_BBOX = { minLat: 37.85, maxLat: 38.30, minLon: -123.05, maxLon: -122.55 };
+
+function inWestMarin(coords) {
+  if (!Array.isArray(coords) || coords.length < 2) return false;
+  const [lon, lat] = coords;
+  return lat >= WM_BBOX.minLat && lat <= WM_BBOX.maxLat &&
+         lon >= WM_BBOX.minLon && lon <= WM_BBOX.maxLon;
+}
+
+// Keyword matchers — use regex with word boundaries for Hwy 1 to avoid CA-11, CA-13, CA-116 etc.
 // lat: [minLat, maxLat] distinguishes Hwy 1 North vs South at ~38.04 (Olema)
 const ROAD_MATCHERS = [
-  { id: 'hwy1n',  kw: ['highway 1','hwy 1','ca-1','route 1','ca 1'],  lat: [38.04, 99] },
-  { id: 'hwy1s',  kw: ['highway 1','hwy 1','ca-1','route 1','ca 1'],  lat: [-99, 38.04] },
-  { id: 'sfd',    kw: ['sir francis drake','francis drake'] },
-  { id: 'bv',     kw: ['bear valley'] },
-  { id: 'prp',    kw: ['point reyes-petaluma','reyes-petaluma','reyes petaluma'] },
-  { id: 'plat',   kw: ['platform bridge'] },
-  { id: 'nic',    kw: ['nicasio valley'] },
-  { id: 'marsh',  kw: ['marshall-petaluma','marshall petaluma'] },
-  { id: 'tom',    kw: ['tomales-petaluma','tomales petaluma'] },
-  { id: 'fallon', kw: ['fallon-two rock','fallon two rock'] },
-  { id: 'vf',     kw: ['valley ford'] },
+  { id: 'hwy1n',  re: /\b(highway\s*1|hwy\s*1|ca-1|route\s*1)\b/i, lat: [38.04, 99] },
+  { id: 'hwy1s',  re: /\b(highway\s*1|hwy\s*1|ca-1|route\s*1)\b/i, lat: [-99, 38.04] },
+  { id: 'sfd',    re: /sir\s*francis\s*drake|francis\s*drake/i },
+  { id: 'bv',     re: /bear\s*valley/i },
+  { id: 'prp',    re: /point\s*reyes.petaluma|reyes.petaluma/i },
+  { id: 'plat',   re: /platform\s*bridge/i },
+  { id: 'nic',    re: /nicasio\s*valley/i },
+  { id: 'marsh',  re: /marshall.petaluma/i },
+  { id: 'tom',    re: /tomales.petaluma/i },
+  { id: 'fallon', re: /fallon.two\s*rock/i },
+  { id: 'vf',     re: /valley\s*ford/i },
 ];
 
 const CLEAR   = { status: 'Clear',   cls: 'g' };
@@ -608,12 +619,9 @@ async function fetch511() {
   return { raw, cachedAt: cachedAt ? +cachedAt : null };
 }
 
-function matchRoad511(name, coords) {
-  const n = name.toLowerCase();
-  const lat = Array.isArray(coords) && coords.length >= 2 ? coords[1] : null;
-
+function matchRoad511(name, lat) {
   for (const m of ROAD_MATCHERS) {
-    if (!m.kw.some(k => n.includes(k))) continue;
+    if (!m.re.test(name)) continue;
     if (m.lat && lat !== null) {
       const [lo, hi] = m.lat;
       if (lat < lo || lat > hi) continue;
@@ -630,7 +638,12 @@ function parse511Roads(raw) {
 
   for (const ev of events) {
     const active = (ev.status || ev.Status || '').toLowerCase();
-    if (active === 'inactive' || active === 'closed') continue; // "closed" here = event closed, not road
+    if (active === 'inactive' || active === 'closed') continue;
+
+    const coords = ev.geography?.coordinates || null;
+
+    // Discard events outside West Marin bounding box
+    if (!inWestMarin(coords)) continue;
 
     const sev  = (ev.severity  || ev.Severity  || '').toLowerCase();
     const type = (ev.event_type || ev.EventType || ev.type || '').toLowerCase();
@@ -641,14 +654,14 @@ function parse511Roads(raw) {
     const status = isClosure ? 'Closed' : 'Caution';
 
     const roads  = ev.roads  || ev.Roads  || [];
-    const coords = ev.geography?.coordinates || null;
+    const lat    = Array.isArray(coords) && coords.length >= 2 ? coords[1] : null;
 
     const sources = Array.isArray(roads) && roads.length > 0 ? roads : [{ name: headline }];
     for (const r of sources) {
       const rname = r.name || r.Name || '';
-      const id = matchRoad511(rname, coords);
+      const id = matchRoad511(rname, lat);
       if (id && !map[id]) {
-        const detail = (r.from && r.to) ? `${r.from} → ${r.to}` : headline.slice(0, 42);
+        const detail = r.from ? `${r.from}${r.to ? ' → ' + r.to : ''}` : headline.slice(0, 60);
         map[id] = { status, cls, detail };
       }
     }
