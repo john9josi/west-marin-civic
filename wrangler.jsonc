@@ -12,5 +12,10 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "westmarincivic.org/*", "zone_name": "westmarincivic.org" },
+    { "pattern": "www.westmarincivic.org/*", "zone_name": "westmarincivic.org" }
   ]
 }
