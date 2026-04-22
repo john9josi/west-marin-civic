@@ -134,7 +134,7 @@ body {
 
 /* ------------------------------------------------------------------ TRAY */
 .tray { overflow: hidden; max-height: 0; transition: max-height .32s ease; }
-.tray.is-open { max-height: 440px; margin-bottom: 2px; }
+.tray.is-open { max-height: 480px; margin-bottom: 2px; }
 
 .tray-inner {
   padding: 12px 15px 14px;
@@ -153,6 +153,17 @@ body {
   border-bottom: 0.5px solid rgba(0,0,0,.06);
 }
 .tray-row:last-child { border-bottom: none; }
+.tray-power-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 6px; font-size: 13px; padding: 8px 10px; margin-bottom: 6px;
+  background: rgba(59,122,158,.10); border-radius: 7px;
+  border: 0.5px solid rgba(59,122,158,.22);
+}
+.tray-power-label { color: var(--forest); min-width: 0; flex-shrink: 1; font-weight: 600; }
+.tray-power-detail { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; white-space: normal; line-height: 1.3; font-weight: 400; }
+.tray-power-status { font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.tray-power-status.ok  { color: var(--sky); }
+.tray-power-status.out { color: var(--red); }
 .tray-road  { color: var(--muted); min-width: 0; flex-shrink: 1; }
 .tray-road-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tray-road-detail { display: block; font-size: 11px; color: var(--ghost); margin-top: 1px; white-space: normal; line-height: 1.3; }
@@ -217,6 +228,11 @@ body {
 .report-link { font-size: 10px; font-weight: 600; color: var(--red); text-decoration: none; letter-spacing: .02em; }
 .report-link::before { content: "⚠ "; opacity: .8; }
 .report-link:hover, .report-link:focus { text-decoration: underline; }
+
+/* ------------------------------------------------------------------ PGE LINK */
+.pge-row { margin-top: 10px; text-align: center; }
+.pge-link { font-size: 10px; color: var(--sky); text-decoration: none; letter-spacing: .01em; }
+.pge-link:hover, .pge-link:focus { text-decoration: underline; }
 
 /* ------------------------------------------------------------------ STATE VISIBILITY */
 .only-alert { display: none; }
@@ -330,8 +346,9 @@ body {
       <span class="pill-caret" aria-hidden="true">▾</span>
     </button>
 
-    <div class="tray" id="pillTray" data-tray="calm" role="region" aria-label="Road status">
+    <div class="tray" id="pillTray" data-tray="calm" role="region" aria-label="Road and power status">
       <div class="tray-inner">
+        <div id="powerRow"></div>
         <div class="tray-grid" id="trayGrid"></div>
       </div>
     </div>
@@ -378,12 +395,17 @@ body {
         <span class="feed-src"><span class="feed-dot stale" id="dot511"></span><b>511</b> · <span id="age511">—</span></span>
         <span class="feed-src"><span class="feed-dot stale" id="dotNWS"></span><b>NWS</b> · <span id="ageNWS">—</span></span>
         <span class="feed-src"><span class="feed-dot stale" id="dotWFIGS"></span><b>WFIGS</b> · <span id="ageWFIGS">—</span></span>
+        <span class="feed-src"><span class="feed-dot stale" id="dotPGE"></span><b>PG&amp;E</b> · <span id="agePGE">—</span></span>
       </div>
       <div class="feed-summary" id="feedSummary">Connecting to feeds…</div>
     </div>
 
     <div class="report-row">
       <a class="report-link" id="reportLink" href="#">Report stale data</a>
+    </div>
+
+    <div class="pge-row">
+      <a class="pge-link" href="https://pgealerts.alerts.pge.com/?WT.mc_id=Vanity_outages" target="_blank" rel="noopener">Sign up for PG&amp;E outage alerts →</a>
     </div>
 
   </main>
@@ -404,7 +426,7 @@ body {
 
     <div class="section-head" style="margin-top:28px;">Feedback</div>
     <p class="feedback-body">Your feedback tells us what's broken and what we could add to make life a little easier around here.</p>
-    <a class="feedback-link" href="mailto:john@equanimity.is?subject=West%20Marin%20Civic%20Feedback">My 2 cents →</a>
+    <a class="feedback-link" href="mailto:hello@westmarincivic.org?subject=West%20Marin%20Civic%20Feedback">Share your 2 cents →</a>
 
   </main>
 
@@ -412,6 +434,7 @@ body {
 
 <div class="dev-bar" aria-hidden="true">
   <button class="dev-btn" data-s="calm">Calm</button>
+  <button class="dev-btn" data-s="calm_outage">Outage</button>
   <button class="dev-btn" data-s="watch">Watch</button>
   <button class="dev-btn" data-s="alert">Alert</button>
   <button class="dev-btn" data-s="unknown">Unknown</button>
@@ -479,8 +502,17 @@ const MOCK = {
     level: 'calm', pillTitle: 'All clear', pillSub: 'Inverness · just now',
     wxIcon: '⛅', wxText: 'Partly cloudy · 58°F · W 12 mph', wxWarn: false,
     roads: ROADS.map(r => ({ ...r, ...CLEAR })),
-    feeds: { '511':{age:'3m',state:'live'}, 'NWS':{age:'6m',state:'live'}, 'WFIGS':{age:'42m',state:'live'} },
+    feeds: { '511':{age:'3m',state:'live'}, 'NWS':{age:'6m',state:'live'}, 'WFIGS':{age:'42m',state:'live'}, 'PGE':{age:'8m',state:'live'} },
     feedSummary: 'All feeds live · updated <b>3 min ago</b>',
+    pge: { outages: [], total: 0 },
+  },
+  calm_outage: {
+    level: 'calm', pillTitle: 'All clear', pillSub: 'Inverness · just now',
+    wxIcon: '⛅', wxText: 'Partly cloudy · 58°F · W 12 mph', wxWarn: false,
+    roads: ROADS.map(r => ({ ...r, ...CLEAR })),
+    feeds: { '511':{age:'3m',state:'live'}, 'NWS':{age:'6m',state:'live'}, 'WFIGS':{age:'42m',state:'live'}, 'PGE':{age:'8m',state:'live'} },
+    feedSummary: 'All feeds live · updated <b>3 min ago</b>',
+    pge: { outages: [{ city: 'Point Reyes Station', customers: 142, cause: 'Equipment', etor: new Date(Date.now() + 4*3600*1000).toISOString() }], total: 142 },
   },
   watch: {
     level: 'watch', pillTitle: 'Fire Weather Watch', pillSub: 'NWS CAZ505 · until 8 PM PDT',
@@ -490,7 +522,7 @@ const MOCK = {
       { ...ROADS[1], status: 'Caution', cls: 'a', detail: 'Debris · Olema → Stinson' },
       ...ROADS.slice(2).map(r => ({ ...r, ...CLEAR })),
     ],
-    feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'3m',state:'live'}, 'WFIGS':{age:'55m',state:'live'} },
+    feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'3m',state:'live'}, 'WFIGS':{age:'55m',state:'live'}, 'PGE':{age:'4m',state:'live'} },
     feedSummary: 'All feeds live · updated <b>1 min ago</b>',
   },
   alert: {
@@ -503,14 +535,14 @@ const MOCK = {
       { ...ROADS[3], status: 'Closed',  cls: 'r', detail: 'Evacuation route' },
       ...ROADS.slice(4).map(r => ({ ...r, ...CLEAR })),
     ],
-    feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'2m',state:'live'}, 'WFIGS':{age:'12m',state:'live'} },
+    feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'2m',state:'live'}, 'WFIGS':{age:'12m',state:'live'}, 'PGE':{age:'2m',state:'live'} },
     feedSummary: null,
   },
   unknown: {
     level: 'unknown', pillTitle: 'Status unknown', pillSub: 'Feeds offline · call 911 for emergencies',
     wxIcon: '📡', wxText: 'Unable to reach data feeds', wxWarn: false,
     roads: ROADS.map(r => ({ ...r, status: '—', cls: '' })),
-    feeds: { '511':{age:'18m',state:'off'}, 'NWS':{age:'18m',state:'off'}, 'WFIGS':{age:'18m',state:'off'} },
+    feeds: { '511':{age:'18m',state:'off'}, 'NWS':{age:'18m',state:'off'}, 'WFIGS':{age:'18m',state:'off'}, 'PGE':{age:'18m',state:'off'} },
     feedSummary: '⚠ All feeds offline · check your connection',
   },
 };
@@ -519,8 +551,8 @@ const MOCK = {
 // FRESHNESS + POLLING STATE
 // ============================================================
 
-const STALE_MINS = { '511': 15, 'NWS': 15, 'WFIGS': 90 };
-const fresh = { '511': { at: null, ok: false }, 'NWS': { at: null, ok: false }, 'WFIGS': { at: null, ok: false } };
+const STALE_MINS = { '511': 15, 'NWS': 15, 'WFIGS': 90, 'PGE': 30 };
+const fresh = { '511': { at: null, ok: false }, 'NWS': { at: null, ok: false }, 'WFIGS': { at: null, ok: false }, 'PGE': { at: null, ok: false } };
 
 let currentLevel  = 'calm';
 let failedCycles  = 0;
@@ -705,6 +737,33 @@ async function fetchWFIGS() {
 }
 
 // ============================================================
+// PG&E OUTAGES  (ArcGIS, West Marin bbox filter client-side)
+// ============================================================
+
+async function fetchPGE() {
+  const url = 'https://ags.pge.esriemcs.com/arcgis/rest/services/43/outages/MapServer/5/query' +
+    '?where=1%3D1&outFields=OUTAGE_LATITUDE,OUTAGE_LONGITUDE,CITY,EST_CUSTOMERS,OUTAGE_CAUSE,CURRENT_ETOR_TEXT&f=pjson';
+  const res = await fetchWithTimeout(url);
+  if (!res.ok) throw new Error('PGE ' + res.status);
+  const data = await res.json();
+  const features = (data.features || []).filter(f => {
+    const a = f.attributes;
+    return a && inWestMarin([a.OUTAGE_LONGITUDE, a.OUTAGE_LATITUDE]);
+  });
+  if (!features.length) return { outages: [], total: 0 };
+  const total = features.reduce((s, f) => s + (f.attributes.EST_CUSTOMERS || 0), 0);
+  return {
+    outages: features.map(f => ({
+      city:  f.attributes.CITY || 'West Marin',
+      customers: f.attributes.EST_CUSTOMERS || 0,
+      cause: f.attributes.OUTAGE_CAUSE || '',
+      etor:  f.attributes.CURRENT_ETOR_TEXT || '',
+    })),
+    total,
+  };
+}
+
+// ============================================================
 // STATE BUILDER
 // ============================================================
 
@@ -733,7 +792,7 @@ function wxEmoji(sf, windMph, level) {
   return '☀️';
 }
 
-function buildState(nwsAlert, nwsWx, roads511, fire, has511) {
+function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge) {
   // --- level ---
   let level = nwsAlert?.level || 'calm';
   if (fire) level = 'alert';
@@ -787,6 +846,7 @@ function buildState(nwsAlert, nwsWx, roads511, fire, has511) {
     '511':   { age: ageStr(fresh['511'].at),   state: dotState('511') },
     'NWS':   { age: ageStr(fresh['NWS'].at),   state: dotState('NWS') },
     'WFIGS': { age: ageStr(fresh['WFIGS'].at), state: dotState('WFIGS') },
+    'PGE':   { age: ageStr(fresh['PGE'].at),   state: dotState('PGE') },
   };
   const vals = Object.values(feeds);
   const newestAge = Object.values(fresh).filter(f => f.at && f.ok).map(f => ageStr(f.at))[0] || '—';
@@ -797,7 +857,7 @@ function buildState(nwsAlert, nwsWx, roads511, fire, has511) {
     : anyOff  ? `⚠ Some feeds offline`
     : 'Feeds updating…';
 
-  return { level, pillTitle, pillSub, wxIcon, wxText, wxWarn, roads, feeds, feedSummary };
+  return { level, pillTitle, pillSub, wxIcon, wxText, wxWarn, roads, feeds, feedSummary, pge };
 }
 
 // ============================================================
@@ -817,6 +877,7 @@ function renderUnknown() {
       '511':   { age: ageStr(fresh['511'].at),   state: 'off' },
       'NWS':   { age: ageStr(fresh['NWS'].at),   state: 'off' },
       'WFIGS': { age: ageStr(fresh['WFIGS'].at), state: 'off' },
+      'PGE':   { age: ageStr(fresh['PGE'].at),   state: 'off' },
     },
     feedSummary: '⚠ All feeds offline · check your connection',
   });
@@ -860,6 +921,31 @@ function render(d) {
      </div>`
   ).join('');
 
+  // Power row
+  const powerEl = document.getElementById('powerRow');
+  if (d.pge && fresh['PGE'].ok) {
+    const hasOutage = d.pge.outages && d.pge.outages.length > 0;
+    if (hasOutage) {
+      const o = d.pge.outages[0];
+      const etorStr = o.etor ? (() => {
+        try {
+          return new Date(o.etor).toLocaleTimeString('en-US', {
+            hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles'
+          });
+        } catch { return null; }
+      })() : null;
+      const detail = [
+        o.customers ? `${o.customers.toLocaleString()} customers affected` : null,
+        etorStr ? `restored by ${etorStr} PT` : null,
+      ].filter(Boolean).join(' · ');
+      powerEl.innerHTML = `<div class="tray-power-row"><div class="tray-power-label"><span class="tray-power-name">Power · ${esc(o.city)}</span>${detail ? `<span class="tray-power-detail">${esc(detail)}</span>` : ''}</div><a class="tray-power-status out" href="https://pgealerts.alerts.pge.com/?WT.mc_id=Vanity_outages" target="_blank" rel="noopener">Outage →</a></div>`;
+    } else {
+      powerEl.innerHTML = `<div class="tray-power-row"><span class="tray-power-label tray-power-name">Power</span><span class="tray-power-status ok">No outage</span></div>`;
+    }
+  } else {
+    powerEl.innerHTML = '';
+  }
+
   // Auto-open on alert (first time); close when level drops below alert
   if (d.level === 'alert' && !wasOpen) {
     pill.classList.add('is-open');
@@ -875,7 +961,7 @@ function render(d) {
   pill.classList.remove('is-loading');
 
   // Feed footer
-  ['511','NWS','WFIGS'].forEach(src => {
+  ['511','NWS','WFIGS','PGE'].forEach(src => {
     document.getElementById(`dot${src}`).className = `feed-dot ${d.feeds[src].state}`;
     document.getElementById(`age${src}`).textContent = d.feeds[src].age;
   });
@@ -907,11 +993,12 @@ document.getElementById('pill').addEventListener('click', () => {
 
 async function refresh() {
   try {
-    const [rNWSAlert, rNWSWx, r511, rWFIGS] = await Promise.allSettled([
+    const [rNWSAlert, rNWSWx, r511, rWFIGS, rPGE] = await Promise.allSettled([
       fetchNWSAlerts(),
       fetchNWSWeather(),
       fetch511().then(({ raw, cachedAt }) => ({ roads: parse511Roads(raw), cachedAt })),
       fetchWFIGS(),
+      fetchPGE(),
     ]);
 
     const nwsOk = rNWSAlert.status === 'fulfilled' && rNWSWx.status === 'fulfilled';
@@ -919,8 +1006,9 @@ async function refresh() {
     markFresh('NWS',   nwsOk, nwsAt ?? Date.now());
     markFresh('511',   r511.status   === 'fulfilled', r511.value?.cachedAt   ?? Date.now());
     markFresh('WFIGS', rWFIGS.status === 'fulfilled', rWFIGS.value?.cachedAt ?? Date.now());
+    markFresh('PGE',   rPGE.status   === 'fulfilled', Date.now());
 
-    // Blackout detection: all three data sources failed this cycle
+    // Blackout detection: all core data sources failed this cycle (PGE is best-effort, not counted)
     const allFailed = !nwsOk && r511.status === 'rejected' && rWFIGS.status === 'rejected';
     failedCycles = allFailed ? failedCycles + 1 : 0;
 
@@ -934,6 +1022,7 @@ async function refresh() {
         has511                           ? r511.value.roads   : {},
         rWFIGS.status    === 'fulfilled' ? rWFIGS.value?.fire : null,
         has511,
+        rPGE.status === 'fulfilled' ? rPGE.value : null,
       );
       currentLevel = state.level;
       render(state);
@@ -957,7 +1046,12 @@ document.querySelectorAll('.dev-btn').forEach(btn =>
     document.querySelectorAll('.dev-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     if (btn.dataset.s === 'live') { clearTimeout(refreshTimer); refresh(); return; }
-    render(MOCK[btn.dataset.s]);
+    const mock = MOCK[btn.dataset.s];
+    // Temporarily set PGE freshness so power row renders in mock
+    const prevPGE = fresh['PGE'];
+    if (mock.pge) fresh['PGE'] = { at: Date.now(), ok: true };
+    render(mock);
+    fresh['PGE'] = prevPGE;
   })
 );
 
@@ -973,7 +1067,7 @@ document.getElementById('reportLink').addEventListener('click', e => {
   const body = encodeURIComponent(
     `Feed status at time of report:\n${feedInfo}\n\nYour note:\n`
   );
-  window.location.href = `mailto:john@equanimity.is?subject=WMC%20Stale%20Data%20Report&body=${body}`;
+  window.location.href = `mailto:hello@westmarincivic.org?subject=WMC%20Stale%20Data%20Report&body=${body}`;
 });
 
 // ============================================================
@@ -983,10 +1077,22 @@ document.getElementById('reportLink').addEventListener('click', e => {
 // Show loading pulse on first paint
 document.getElementById('pill').classList.add('is-loading');
 
-// Hide dev bar for real users — only show on localhost or ?dev=1
-if (location.hostname !== 'localhost' && !location.search.includes('dev=1')) {
-  document.querySelector('.dev-bar').classList.add('is-hidden');
-}
+// Hide dev bar — show on localhost, or if session is unlocked via password
+(function() {
+  const DEV_KEY = 'wmc_dev_unlocked';
+  const params = new URLSearchParams(location.search);
+  if (params.get('dev') === '1') {
+    const pwd = prompt('Dev password:');
+    if (pwd === '25Vallejo!') {
+      sessionStorage.setItem(DEV_KEY, '1');
+    }
+    // Strip ?dev=1 from URL without reload
+    const clean = location.pathname + location.search.replace(/[?&]dev=1/, '').replace(/^&/, '?');
+    history.replaceState(null, '', clean || location.pathname);
+  }
+  const unlocked = location.hostname === 'localhost' || sessionStorage.getItem(DEV_KEY) === '1';
+  if (!unlocked) document.querySelector('.dev-bar').classList.add('is-hidden');
+})();
 
 refresh(); // scheduleNext() inside chains all future polls
 

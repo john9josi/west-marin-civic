@@ -1,0 +1,4 @@
+.git/
+.wrangler/
+*.map
+node_modules/
