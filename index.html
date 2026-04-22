@@ -86,39 +86,39 @@ body {
   background: var(--fog);
   z-index: 10;
 }
-.wordmark { font-size: 15px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; user-select: none; }
+.wordmark { font-size: 16px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; user-select: none; }
 .wordmark em { font-style: normal; color: var(--sky); }
-.nav-links { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.nav-links { display: flex; gap: 14px; font-size: 14px; color: var(--muted); }
 .nav-links .emg { color: var(--red); font-weight: 600; }
 
 /* ------------------------------------------------------------------ MAIN */
-.main { padding: 18px 20px 80px; }
+.main { padding: 20px 20px 80px; }
 
 /* ------------------------------------------------------------------ STATUS TAG */
-.status-tag { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--sky); margin-bottom: 3px; }
-.status-disc { font-size: 10px; color: var(--ghost); margin-bottom: 11px; letter-spacing: .01em; }
+.status-tag { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--sky); margin-bottom: 3px; }
+.status-disc { font-size: 11px; color: var(--ghost); margin-bottom: 13px; letter-spacing: .01em; }
 
 /* ------------------------------------------------------------------ WEATHER LINE */
-.wx-line { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; letter-spacing: .01em; }
-.wx-line .icon { font-size: 14px; filter: saturate(.8); line-height: 1; }
+.wx-line { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 7px; margin-bottom: 10px; letter-spacing: .01em; }
+.wx-line .icon { font-size: 18px; filter: saturate(.8); line-height: 1; }
 .wx-line .warn { color: var(--amber); font-weight: 600; }
 
 /* ------------------------------------------------------------------ PILL */
 .pill {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 15px; border-radius: 999px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 15px 18px; border-radius: 999px;
   width: 100%; cursor: pointer; border: none;
-  font-family: inherit; font-size: 13px; font-weight: 700;
+  font-family: inherit; font-size: 16px; font-weight: 700;
   text-align: left; color: #fff;
   position: relative; user-select: none;
   -webkit-tap-highlight-color: transparent;
   transition: border-radius .25s ease; outline: none; line-height: 1;
 }
 .pill::after { content: ""; position: absolute; inset: -10px -6px; }
-.pill-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.pill-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
 .pill-body { flex: 1; line-height: 1.25; }
-.pill-body small { display: block; font-weight: 400; font-size: 11px; opacity: .88; margin-top: 2px; }
-.pill-caret { font-size: 11px; opacity: .75; flex-shrink: 0; transition: transform .25s ease; }
+.pill-body small { display: block; font-weight: 400; font-size: 13px; opacity: .88; margin-top: 3px; }
+.pill-caret { font-size: 13px; opacity: .75; flex-shrink: 0; transition: transform .25s ease; }
 
 .pill[data-pill="calm"]    { background: var(--green); }
 .pill[data-pill="watch"]   { background: var(--amber); }
@@ -134,10 +134,10 @@ body {
 
 /* ------------------------------------------------------------------ TRAY */
 .tray { overflow: hidden; max-height: 0; transition: max-height .32s ease; }
-.tray.is-open { max-height: 340px; margin-bottom: 2px; }
+.tray.is-open { max-height: 440px; margin-bottom: 2px; }
 
 .tray-inner {
-  padding: 10px 13px 12px;
+  padding: 12px 15px 14px;
   border: 0.5px solid rgba(22,163,74,.28);
   border-top: 0; border-radius: 0 0 12px 12px;
   background: rgba(22,163,74,.05);
@@ -149,7 +149,7 @@ body {
 .tray-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .tray-row {
   display: flex; justify-content: space-between; align-items: baseline;
-  gap: 6px; font-size: 11px; padding: 4px 0;
+  gap: 6px; font-size: 13px; padding: 7px 0;
   border-bottom: 0.5px solid rgba(0,0,0,.06);
 }
 .tray-row:nth-last-child(-n+2) { border-bottom: none; }
@@ -161,40 +161,40 @@ body {
 
 /* ------------------------------------------------------------------ SECTION HEAD */
 .section-head {
-  font-size: 10px; font-weight: 600; letter-spacing: .1em;
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
   text-transform: uppercase; color: var(--sky);
-  margin: 20px 0 9px; display: flex; align-items: center; gap: 8px;
+  margin: 22px 0 10px; display: flex; align-items: center; gap: 8px;
 }
 .section-head::after { content: ""; flex: 1; height: 0.5px; background: var(--sand); }
 
 /* ------------------------------------------------------------------ CONTACTS — text rows (calm / watch) */
 .contact-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 9px 0; border-bottom: 0.5px solid var(--divider); font-size: 12px;
+  padding: 11px 0; border-bottom: 0.5px solid var(--divider); font-size: 14px;
 }
 .contact-row:last-child { border-bottom: none; }
 .contact-label { color: var(--muted); }
 .contact-val { font-weight: 600; color: var(--forest); }
-.contact-911 { font-size: 16px; }
+.contact-911 { font-size: 18px; }
 
 /* ------------------------------------------------------------------ CONTACTS — call buttons (alert) */
 .call-btn {
-  display: flex; align-items: center; gap: 12px;
-  padding: 13px 15px; border-radius: 8px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 14px;
+  padding: 15px 16px; border-radius: 10px; margin-bottom: 8px;
   text-decoration: none; font-family: inherit;
   -webkit-tap-highlight-color: transparent; transition: opacity .15s;
 }
 .call-btn:active { opacity: .82; }
 .call-btn.emg { background: var(--red); color: #fff; }
 .call-btn.std { background: var(--white); border: 0.5px solid var(--sand); color: var(--forest); }
-.call-icon { font-size: 17px; width: 24px; text-align: center; flex-shrink: 0; line-height: 1; }
-.call-label { font-size: 13px; font-weight: 700; line-height: 1.2; }
-.call-sub   { font-size: 11px; opacity: .72; margin-top: 2px; }
-.call-btn.emg .call-label { font-size: 15px; }
+.call-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; line-height: 1; }
+.call-label { font-size: 15px; font-weight: 700; line-height: 1.2; }
+.call-sub   { font-size: 13px; opacity: .72; margin-top: 2px; }
+.call-btn.emg .call-label { font-size: 17px; }
 .call-btn.emg .call-sub   { opacity: .88; }
 
 /* ------------------------------------------------------------------ FROM WMC */
-.from-card { background: var(--white); border: 0.5px solid var(--sand); border-radius: 8px; padding: 13px 14px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.from-card { background: var(--white); border: 0.5px solid var(--sand); border-radius: 8px; padding: 14px 15px; font-size: 14px; color: var(--muted); line-height: 1.65; }
 
 /* ------------------------------------------------------------------ FEED FOOTER */
 .feed-footer { margin-top: 24px; padding-top: 12px; border-top: 0.5px solid var(--sand); }
