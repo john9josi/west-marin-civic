@@ -1,0 +1,48 @@
+name: Sprint Email
+
+on:
+  push:
+    branches:
+      - 'plan/**'
+      - 'sprint/**'
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send plan email
+        if: startsWith(github.ref, 'refs/heads/plan/')
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          DATE=$(jq -r '.sprint_start' sprint.json)
+          ISSUES=$(jq -r '[.issues[] | "- #\(.number): \(.title)"] | join("\n")' sprint.json)
+          BODY="Sprint plan ready for your approval.
+
+Issues this sprint:
+$ISSUES
+
+Review and approve at: https://github.com/${{ github.repository }}/pulls
+Once merged the build will run automatically."
+          bash send_email.sh "WMC Sprint Plan - $DATE" "$BODY"
+
+      - name: Send review email
+        if: startsWith(github.ref, 'refs/heads/sprint/')
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          DATE=$(jq -r '.sprint_start' sprint.json)
+          ISSUES=$(jq -r '[.issues[] | "- #\(.number): \(.title)"] | join("\n")' sprint.json)
+          BRANCH="${{ github.ref_name }}"
+          BODY="Sprint built and ready for review.
+
+Built this sprint:
+$ISSUES
+
+Branch: https://github.com/${{ github.repository }}/tree/$BRANCH
+Staging: https://west-marin-civic.john-b98.workers.dev
+
+To ship: merge the sprint branch at https://github.com/${{ github.repository }}/pulls"
+          bash send_email.sh "WMC Sprint Ready for Review - $DATE" "$BODY"
