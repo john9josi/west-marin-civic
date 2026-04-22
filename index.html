@@ -148,13 +148,15 @@ body {
 
 .tray-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .tray-row {
-  display: flex; justify-content: space-between; align-items: baseline;
+  display: flex; justify-content: space-between; align-items: flex-start;
   gap: 6px; font-size: 13px; padding: 7px 0;
   border-bottom: 0.5px solid rgba(0,0,0,.06);
 }
 .tray-row:nth-last-child(-n+2) { border-bottom: none; }
-.tray-road  { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
-.tray-status { font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.tray-road  { color: var(--muted); min-width: 0; flex-shrink: 1; }
+.tray-road-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tray-road-detail { display: block; font-size: 11px; color: var(--ghost); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tray-status { font-weight: 700; white-space: nowrap; flex-shrink: 0; padding-top: 1px; }
 .tray-status.g { color: var(--green); }
 .tray-status.r { color: var(--red); }
 .tray-status.a { color: var(--amber); }
@@ -195,6 +197,8 @@ body {
 
 /* ------------------------------------------------------------------ FROM WMC */
 .from-card { background: var(--white); border: 0.5px solid var(--sand); border-radius: 8px; padding: 14px 15px; font-size: 14px; color: var(--muted); line-height: 1.65; }
+.from-card-link { color: var(--sky); font-weight: 600; text-decoration: none; }
+.from-card-link:hover { text-decoration: underline; }
 
 /* ------------------------------------------------------------------ FEED FOOTER */
 .feed-footer { margin-top: 24px; padding-top: 12px; border-top: 0.5px solid var(--sand); }
@@ -225,7 +229,7 @@ body {
 .page { display: none; }
 .page.is-active { display: block; }
 
-.about-body { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 0; }
+.about-body { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 0; }
 
 .cta-row { display: flex; gap: 10px; margin-top: 4px; }
 .cta-btn {
@@ -239,11 +243,11 @@ body {
 .cta-btn.secondary { background: var(--white); border: 0.5px solid var(--sand); color: var(--forest); }
 .cta-icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
 
-.feedback-body { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; }
+.feedback-body { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; }
 .feedback-link {
   display: block; text-align: center; padding: 13px; border-radius: 8px;
   background: var(--white); border: 0.5px solid var(--sand);
-  font-size: 13px; font-weight: 700; color: var(--forest); text-decoration: none;
+  font-size: 14px; font-weight: 700; color: var(--forest); text-decoration: none;
   -webkit-tap-highlight-color: transparent; transition: opacity .15s;
 }
 .feedback-link:active { opacity: .8; }
@@ -251,11 +255,31 @@ body {
 /* ------------------------------------------------------------------ NAV TABS */
 .nav-tab {
   font-size: 12px; color: var(--muted); cursor: pointer;
-  padding: 2px 0; border-bottom: 1.5px solid transparent;
+  padding: 4px 2px; border-bottom: 1.5px solid transparent;
   user-select: none; -webkit-tap-highlight-color: transparent;
+  background: none; border-left: none; border-right: none; border-top: none;
+  font-family: inherit;
 }
 .nav-tab.active { color: var(--forest); font-weight: 600; border-bottom-color: var(--forest); }
 .nav-tab.emg { color: var(--red); font-weight: 600; }
+
+/* ------------------------------------------------------------------ LOADING STATE */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .35; }
+}
+.pill[data-pill="calm"].is-loading .pill-dot { animation: pulse-dot 1.2s ease-in-out infinite; }
+
+/* ------------------------------------------------------------------ FOCUS VISIBLE */
+.pill:focus-visible {
+  outline: 3px solid rgba(255,255,255,.7);
+  outline-offset: 2px;
+}
+.nav-tab:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
 
 /* ------------------------------------------------------------------ DEV SWITCHER */
 .dev-bar {
@@ -264,6 +288,7 @@ body {
   background: rgba(29,58,47,.93); padding: 7px 10px; border-radius: 999px;
   z-index: 999; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
+.dev-bar.is-hidden { display: none; }
 .dev-btn {
   font-family: inherit; font-size: 11px; font-weight: 600;
   padding: 5px 13px; border-radius: 999px;
@@ -280,9 +305,9 @@ body {
 
   <nav class="nav">
     <div class="wordmark">West Marin <em>Civic</em></div>
-    <div class="nav-links">
-      <span class="nav-tab emg active" data-tab="home">Emergency</span>
-      <span class="nav-tab" data-tab="more">More</span>
+    <div class="nav-links" role="tablist">
+      <button class="nav-tab emg active" data-tab="home" role="tab" aria-selected="true">Emergency</button>
+      <button class="nav-tab" data-tab="more" role="tab" aria-selected="false">More</button>
     </div>
   </nav>
 
@@ -314,10 +339,10 @@ body {
     <!-- Emergency contacts — text rows (calm / watch) -->
     <div class="hide-alert">
       <div class="section-head">Emergency contacts</div>
-      <div class="contact-row"><span class="contact-label">Emergency</span><span class="contact-val contact-911">911</span></div>
-      <div class="contact-row"><span class="contact-label">Point Reyes Fire Station</span><span class="contact-val">(415) 473-7699</span></div>
-      <div class="contact-row"><span class="contact-label">Inverness VFD</span><span class="contact-val">(415) 669-1414</span></div>
-      <div class="contact-row"><span class="contact-label">Marin Fire Hotline</span><span class="contact-val">(415) 473-7191</span></div>
+      <div class="contact-row"><span class="contact-label">Emergency</span><a class="contact-val contact-911" href="tel:911">911</a></div>
+      <div class="contact-row"><span class="contact-label">Point Reyes Fire Station</span><a class="contact-val" href="tel:+14154737699">(415) 473-7699</a></div>
+      <div class="contact-row"><span class="contact-label">Inverness VFD</span><a class="contact-val" href="tel:+14156691414">(415) 669-1414</a></div>
+      <div class="contact-row"><span class="contact-label">Marin Fire Hotline</span><a class="contact-val" href="tel:+14154737191">(415) 473-7191</a></div>
     </div>
 
     <!-- Emergency contacts — call buttons (alert only) -->
@@ -344,7 +369,7 @@ body {
     <!-- From West Marin Civic -->
     <div class="hide-alert">
       <div class="section-head">From West Marin Civic</div>
-      <div class="from-card">Seasonal note and local notices will appear here.</div>
+      <div class="from-card">West Marin Civic builds digital infrastructure to keep West Marin safe, starting with local road closures and emergencies. <a href="#" class="from-card-link" data-tab="more">See our More page.</a></div>
     </div>
 
     <!-- Feed footer -->
@@ -358,7 +383,7 @@ body {
     </div>
 
     <div class="report-row">
-      <a class="report-link" href="#" id="reportLink">Report stale data</a>
+      <a class="report-link" id="reportLink" href="#">Report stale data</a>
     </div>
 
   </main>
@@ -392,7 +417,7 @@ body {
   <button class="dev-btn active" data-s="live">Live</button>
 </div>
 
-<script src="config.js"></script>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "70cf1c1b3dfb488ebb15f72a23c202f3"}'></script>
 <script>
 'use strict';
 
@@ -431,8 +456,7 @@ const ROAD_MATCHERS = [
 ];
 
 const CLEAR   = { status: 'Clear',   cls: 'g' };
-const CLOSED  = { status: 'Closed',  cls: 'r' };
-const CAUTION = { status: 'Caution', cls: 'a' };
+const UNKNOWN_ROAD = { status: '—', cls: '' };
 
 // ============================================================
 // MOCK DATA (dev switcher + loading fallback)
@@ -512,6 +536,16 @@ function dotState(src) {
 }
 
 // ============================================================
+// FETCH WITH TIMEOUT
+// ============================================================
+
+function fetchWithTimeout(url, opts = {}, ms = 10000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
+// ============================================================
 // NWS ALERTS  (zone CAZ505 = Coastal North Bay incl. Pt Reyes)
 // ============================================================
 
@@ -519,7 +553,7 @@ const FIRE_ALERT_EVENTS = ['Red Flag Warning', 'Fire Warning', 'Extreme Fire Dan
 const FIRE_WATCH_EVENTS  = ['Fire Weather Watch'];
 
 async function fetchNWSAlerts() {
-  const res = await fetch('https://api.weather.gov/alerts/active?zone=CAZ505', {
+  const res = await fetchWithTimeout('https://api.weather.gov/alerts/active?zone=CAZ505', {
     headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' }
   });
   const cachedAt = res.headers.get('X-Cached-At');
@@ -543,7 +577,7 @@ async function fetchNWSAlerts() {
 // ============================================================
 
 async function fetchNWSWeather() {
-  const res = await fetch('https://api.weather.gov/gridpoints/MTR/74,121/forecast/hourly', {
+  const res = await fetchWithTimeout('https://api.weather.gov/gridpoints/MTR/74,121/forecast/hourly', {
     headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' }
   });
   const cachedAt = res.headers.get('X-Cached-At');
@@ -566,7 +600,7 @@ async function fetchNWSWeather() {
 // ============================================================
 
 async function fetch511() {
-  const res = await fetch('/api/511');
+  const res = await fetchWithTimeout('/api/511');
   const cachedAt = res.headers.get('X-Cached-At');
   if (!res.ok) throw new Error('511 ' + res.status);
   const raw = await res.json();
@@ -685,7 +719,7 @@ function wxEmoji(sf, windMph, level) {
   return '☀️';
 }
 
-function buildState(nwsAlert, nwsWx, roads511, fire) {
+function buildState(nwsAlert, nwsWx, roads511, fire, has511) {
   // --- level ---
   let level = nwsAlert?.level || 'calm';
   if (fire) level = 'alert';
@@ -730,7 +764,8 @@ function buildState(nwsAlert, nwsWx, roads511, fire) {
   // --- roads ---
   const roads = ROADS.map(r => {
     const ov = roads511[r.id];
-    return ov ? { ...r, ...ov } : { ...r, ...CLEAR };
+    if (ov) return { ...r, ...ov };
+    return has511 ? { ...r, ...CLEAR } : { ...r, ...UNKNOWN_ROAD };
   });
 
   // --- feeds ---
@@ -804,17 +839,26 @@ function render(d) {
   tray.dataset.tray = d.level;
   document.getElementById('trayGrid').innerHTML = d.roads.map(r =>
     `<div class="tray-row">
-       <span class="tray-road">${esc(r.label)}</span>
+       <span class="tray-road">
+         <span class="tray-road-name">${esc(r.label)}</span>${r.detail && r.status !== 'Clear' && r.status !== '—' ? `<span class="tray-road-detail">${esc(r.detail)}</span>` : ''}
+       </span>
        <span class="tray-status ${r.cls}">${esc(r.status)}</span>
      </div>`
   ).join('');
 
-  // Auto-open on alert (first time); preserve open state on refresh
+  // Auto-open on alert (first time); close when level drops below alert
   if (d.level === 'alert' && !wasOpen) {
     pill.classList.add('is-open');
     pill.setAttribute('aria-expanded', 'true');
     tray.classList.add('is-open');
+  } else if (d.level !== 'alert' && d.level !== 'watch' && wasOpen) {
+    pill.classList.remove('is-open');
+    pill.setAttribute('aria-expanded', 'false');
+    tray.classList.remove('is-open');
   }
+
+  // Remove loading pulse once data arrives
+  pill.classList.remove('is-loading');
 
   // Feed footer
   ['511','NWS','WFIGS'].forEach(src => {
@@ -869,11 +913,13 @@ async function refresh() {
     if (failedCycles >= 2) {
       renderUnknown();
     } else {
+      const has511 = r511.status === 'fulfilled';
       const state = buildState(
         rNWSAlert.status === 'fulfilled' ? rNWSAlert.value    : null,
         rNWSWx.status    === 'fulfilled' ? rNWSWx.value       : null,
-        r511.status      === 'fulfilled' ? r511.value.roads   : {},
+        has511                           ? r511.value.roads   : {},
         rWFIGS.status    === 'fulfilled' ? rWFIGS.value?.fire : null,
+        has511,
       );
       currentLevel = state.level;
       render(state);
@@ -902,17 +948,31 @@ document.querySelectorAll('.dev-btn').forEach(btn =>
 );
 
 // ============================================================
-// REPORT STALE — Phase 5 wires full mailto flow
+// REPORT STALE
 // ============================================================
 
 document.getElementById('reportLink').addEventListener('click', e => {
   e.preventDefault();
-  alert('Report stale data — coming in Phase 5');
+  const feedInfo = ['511','NWS','WFIGS'].map(s =>
+    `${s}: ${fresh[s].ok ? 'live' : 'offline'}, last seen ${ageStr(fresh[s].at)}`
+  ).join('\n');
+  const body = encodeURIComponent(
+    `Feed status at time of report:\n${feedInfo}\n\nYour note:\n`
+  );
+  window.location.href = `mailto:john@equanimity.is?subject=WMC%20Stale%20Data%20Report&body=${body}`;
 });
 
 // ============================================================
 // INIT
 // ============================================================
+
+// Show loading pulse on first paint
+document.getElementById('pill').classList.add('is-loading');
+
+// Hide dev bar for real users — only show on localhost or ?dev=1
+if (location.hostname !== 'localhost' && !location.search.includes('dev=1')) {
+  document.querySelector('.dev-bar').classList.add('is-hidden');
+}
 
 refresh(); // scheduleNext() inside chains all future polls
 
@@ -920,14 +980,23 @@ refresh(); // scheduleNext() inside chains all future polls
 // NAV TABS
 // ============================================================
 
+function switchTab(target) {
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === target);
+    t.setAttribute('aria-selected', t.dataset.tab === target ? 'true' : 'false');
+  });
+  document.querySelectorAll('.page').forEach(p =>
+    p.classList.toggle('is-active', p.id === 'page-' + target)
+  );
+}
+
+document.querySelectorAll('.from-card-link[data-tab]').forEach(link =>
+  link.addEventListener('click', e => { e.preventDefault(); switchTab(link.dataset.tab); })
+);
+
 document.querySelectorAll('.nav-tab').forEach(tab =>
   tab.addEventListener('click', () => {
-    const target = tab.dataset.tab;
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('.page').forEach(p =>
-      p.classList.toggle('is-active', p.id === 'page-' + target)
-    );
+    switchTab(tab.dataset.tab);
   })
 );
 

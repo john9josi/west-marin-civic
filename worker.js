@@ -10,6 +10,11 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // Block .git and .wrangler directory traversal
+    if (url.pathname.startsWith('/.git') || url.pathname.startsWith('/.wrangler')) {
+      return new Response('Not found', { status: 404 });
+    }
+
     // Proxy endpoint: /api/511
     if (url.pathname === '/api/511') {
       if (request.method === 'OPTIONS') {
