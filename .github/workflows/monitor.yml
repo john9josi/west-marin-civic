@@ -1,0 +1,153 @@
+name: Health Monitor
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # every 6 hours
+  workflow_dispatch:         # manual trigger
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check westmarincivic.org loads
+        id: homepage
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://westmarincivic.org)
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "FAIL: homepage returned $STATUS"
+            exit 1
+          fi
+          # Check expected content is present
+          BODY=$(curl -s --max-time 10 https://westmarincivic.org)
+          if ! echo "$BODY" | grep -q "westmarincivic"; then
+            echo "FAIL: homepage missing expected content"
+            exit 1
+          fi
+          echo "OK: homepage 200"
+
+      - name: Check /api/511 proxy
+        id: api511
+        run: |
+          RESPONSE=$(curl -s --max-time 15 https://westmarincivic.org/api/511)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://westmarincivic.org/api/511)
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "FAIL: /api/511 returned $STATUS"
+            exit 1
+          fi
+          # Validate JSON
+          if ! echo "$RESPONSE" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+            echo "FAIL: /api/511 returned invalid JSON"
+            exit 1
+          fi
+          echo "OK: /api/511 200 with valid JSON"
+
+      - name: Check /api/sprint endpoint
+        id: sprint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://westmarincivic.org/api/sprint?token=${{ secrets.SPRINT_TOKEN }}")
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "FAIL: /api/sprint returned $STATUS"
+            exit 1
+          fi
+          echo "OK: /api/sprint 200"
+
+      - name: Check PG&E outage API reachable
+        id: pge
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://ags.pge.esriemcs.com/arcgis/rest/services/43/outages/MapServer/5/query?where=1%3D1&outFields=OUTAGE_LATITUDE&f=pjson&resultRecordCount=1")
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" != "200" ]; then
+            echo "WARN: PG&E API returned $STATUS (may be upstream issue)"
+            # Don't fail the job for upstream APIs — just warn
+          else
+            echo "OK: PG&E API reachable"
+          fi
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const steps = {
+              homepage: { id: 'homepage', label: 'Homepage load' },
+              api511: { id: 'api511', label: '/api/511 proxy' },
+              sprint: { id: 'sprint', label: '/api/sprint endpoint' },
+            };
+
+            const failed = [];
+            if ('${{ steps.homepage.outcome }}' === 'failure') failed.push('Homepage load (westmarincivic.org returned non-200 or missing content)');
+            if ('${{ steps.api511.outcome }}' === 'failure') failed.push('/api/511 proxy (non-200 or invalid JSON)');
+            if ('${{ steps.sprint.outcome }}' === 'failure') failed.push('/api/sprint endpoint (non-200)');
+
+            const title = `[automated] Health check failed — ${new Date().toISOString().slice(0,10)}`;
+            const body = [
+              '## Automated health check failure',
+              '',
+              '**Failed checks:**',
+              ...failed.map(f => `- ${f}`),
+              '',
+              `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              '_This issue was opened automatically. It will be closed automatically when checks pass._',
+            ].join('\n');
+
+            // Check if a similar open issue already exists to avoid duplicates
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'automated,bug',
+            });
+
+            const duplicate = existing.data.find(i => i.title.startsWith('[automated] Health check failed'));
+            if (duplicate) {
+              // Add a comment instead of opening a new issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: duplicate.number,
+                body: `Still failing as of ${new Date().toISOString()}.\n\nFailed: ${failed.join(', ')}`,
+              });
+              console.log(`Updated existing issue #${duplicate.number}`);
+            } else {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['bug', 'automated', 'critical'],
+              });
+              console.log(`Opened issue #${issue.data.number}`);
+            }
+
+      - name: Close resolved issue on success
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'automated,bug',
+            });
+
+            const issue = existing.data.find(i => i.title.startsWith('[automated] Health check failed'));
+            if (issue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `All checks passing as of ${new Date().toISOString()}. Auto-closing.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+              console.log(`Closed issue #${issue.number}`);
+            }
