@@ -13,6 +13,9 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "kv_namespaces": [
+    { "binding": "SPRINT_KV", "id": "550e6023b5f242df82e9fa65d55824df" }
+  ],
   "workers_dev": true,
   "routes": [
     { "pattern": "westmarincivic.org/*", "zone_name": "westmarincivic.org" },
