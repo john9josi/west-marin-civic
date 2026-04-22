@@ -685,13 +685,23 @@ function parse511Roads(raw) {
     const roads  = ev.roads  || ev.Roads  || [];
     const lat    = Array.isArray(coords) && coords.length >= 2 ? coords[1] : null;
 
+    // Build detail from directional info — never echo a bare road name
+    const dirDetail = (() => {
+      for (const r of (Array.isArray(roads) ? roads : [])) {
+        if (r.from) return `${r.from}${r.to ? ' → ' + r.to : ''}`;
+      }
+      // Use headline only if it adds information beyond just a road name
+      const h = headline.slice(0, 60).trim();
+      const looksLikeJustRoadName = /^(hwy|highway|ca-|route|road|rd|blvd|ave)\b/i.test(h) && !h.includes('·') && !h.includes('-') && h.split(' ').length < 5;
+      return looksLikeJustRoadName ? '' : h;
+    })();
+
     const sources = Array.isArray(roads) && roads.length > 0 ? roads : [{ name: headline }];
     for (const r of sources) {
       const rname = r.name || r.Name || '';
       const id = matchRoad511(rname, lat);
       if (id && !map[id]) {
-        const detail = r.from ? `${r.from}${r.to ? ' → ' + r.to : ''}` : headline.slice(0, 60);
-        map[id] = { status, cls, detail };
+        map[id] = { status, cls, detail: dirDetail };
       }
     }
   }
