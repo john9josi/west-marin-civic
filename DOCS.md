@@ -112,19 +112,18 @@ If any active fire is found within the bounding box, the app immediately goes to
 
 ## The ROADS Array
 
-This is a hardcoded list of the 11 West Marin roads the app monitors. Each entry has three fields:
+This is a hardcoded list of the 11 West Marin roads the app monitors. Each entry has two fields:
 
 ```javascript
-{ id: 'hwy1n', label: 'Hwy 1 North', detail: 'Point Reyes north' }
+{ id: 'hwy1n', label: 'Hwy 1 North' }
 ```
 
 | Field | What it does |
 |---|---|
 | `id` | Internal key used to match 511 events to roads |
 | `label` | The display name shown in the road status tray |
-| `detail` | Static fallback description — currently unused in a meaningful way (see note below) |
 
-**Note on `detail`:** The detail field in the ROADS array is a static placeholder. When a road has an active 511 event, the detail shown in the tray comes from the live 511 data (e.g., "Olema → Stinson Beach"), not from this field. The static default only appears if the 511 event has no `from`/`to` segment info. It could be removed or repurposed.
+When a road has an active 511 event, a detail line appears below the road name showing the affected segment (e.g., "Olema → Stinson Beach"). This comes from the live 511 data, not the ROADS array.
 
 **The 11 monitored roads:**
 
@@ -243,7 +242,7 @@ echo "YOUR_KEY" | npx wrangler secret put KEY_511
 
 1. Add an entry to the `ROADS` array in `index.html`:
 ```javascript
-{ id: 'myroad', label: 'My Road Name', detail: 'Optional description' }
+{ id: 'myroad', label: 'My Road Name' }
 ```
 
 2. Add a matcher to `ROAD_MATCHERS`:
