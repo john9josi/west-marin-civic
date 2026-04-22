@@ -17,17 +17,21 @@ jobs:
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
+          set -x
+          cat sprint.json
           DATE=$(jq -r '.sprint_start' sprint.json)
           ISSUES=$(jq -r '[.issues[] | "- #\(.number): \(.title)"] | join("\n")' sprint.json)
           BODY=$(printf "Sprint plan ready for your approval.\n\nIssues this sprint:\n%s\n\nReview and approve at: https://github.com/${{ github.repository }}/pulls\nOnce merged the build will run automatically." "$ISSUES")
-          bash send_email.sh "WMC Sprint Plan - $DATE" "$BODY"
+          bash send_email.sh "WMC Sprint Plan - $DATE" "$BODY" || (cat /tmp/resend_response.json && exit 1)
 
       - name: Send review email
         if: startsWith(github.ref, 'refs/heads/sprint/')
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
+          set -x
+          cat sprint.json
           DATE=$(jq -r '.sprint_start' sprint.json)
           ISSUES=$(jq -r '[.issues[] | "- #\(.number): \(.title)"] | join("\n")' sprint.json)
           BODY=$(printf "Sprint built and ready for review.\n\nBuilt this sprint:\n%s\n\nBranch: https://github.com/${{ github.repository }}/tree/${{ github.ref_name }}\nStaging: https://west-marin-civic.john-b98.workers.dev\n\nTo ship: merge the sprint branch at https://github.com/${{ github.repository }}/pulls" "$ISSUES")
-          bash send_email.sh "WMC Sprint Ready for Review - $DATE" "$BODY"
+          bash send_email.sh "WMC Sprint Ready for Review - $DATE" "$BODY" || (cat /tmp/resend_response.json && exit 1)
