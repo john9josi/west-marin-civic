@@ -46,19 +46,6 @@ jobs:
           fi
           echo "OK: /api/511 200 with valid JSON"
 
-      - name: Check /api/sprint endpoint
-        id: sprint
-        env:
-          SPRINT_TOKEN: ${{ secrets.SPRINT_TOKEN }}
-        run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://westmarincivic.org/api/sprint?token=${SPRINT_TOKEN}")
-          echo "status=$STATUS" >> $GITHUB_OUTPUT
-          if [ "$STATUS" != "200" ]; then
-            echo "FAIL: /api/sprint returned $STATUS"
-            exit 1
-          fi
-          echo "OK: /api/sprint 200"
-
       - name: Check PG&E outage API reachable
         id: pge
         run: |
@@ -85,7 +72,6 @@ jobs:
             const failed = [];
             if ('${{ steps.homepage.outcome }}' === 'failure') failed.push('Homepage load (westmarincivic.org returned non-200 or missing content)');
             if ('${{ steps.api511.outcome }}' === 'failure') failed.push('/api/511 proxy (non-200 or invalid JSON)');
-            if ('${{ steps.sprint.outcome }}' === 'failure') failed.push('/api/sprint endpoint (non-200)');
 
             const title = `[automated] Health check failed — ${new Date().toISOString().slice(0,10)}`;
             const body = [
