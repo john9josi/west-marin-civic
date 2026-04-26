@@ -23,7 +23,7 @@ const AUTH_PAGE = `<!DOCTYPE html>
 </style>
 </head>
 <body>
-<form method="POST">
+<form method="POST" action="/__auth">
   <h1>WMC Staging</h1>
   <p>Password required</p>
   <div class="err" id="err">Incorrect password</div>
@@ -33,23 +33,38 @@ const AUTH_PAGE = `<!DOCTYPE html>
 </body>
 </html>`;
 
+function getCookie(request, name) {
+  const cookie = request.headers.get('Cookie') || '';
+  const match = cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+  return match ? match[1] : null;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Dev environment: gate all requests behind a password prompt
+    // Dev environment: gate all requests behind a password + cookie session
     if (env.DEV_PASSWORD) {
-      if (request.method === 'POST' && url.pathname === '/') {
+      const authed = getCookie(request, 'wmc_dev_auth') === env.DEV_PASSWORD;
+
+      // Handle login form POST
+      if (request.method === 'POST' && url.pathname === '/__auth') {
         const body = await request.formData();
         if (body.get('pwd') === env.DEV_PASSWORD) {
-          // Correct — serve the app
-          return env.ASSETS.fetch(new Request(url.origin + '/', request));
+          return new Response(null, {
+            status: 302,
+            headers: {
+              'Location': '/',
+              'Set-Cookie': `wmc_dev_auth=${env.DEV_PASSWORD}; Path=/; HttpOnly; SameSite=Strict`,
+            },
+          });
         }
-        // Wrong password — show form with error
         const page = AUTH_PAGE.replace('display: none', 'display: block');
         return new Response(page, { status: 401, headers: { 'Content-Type': 'text/html' } });
       }
-      if (request.method !== 'POST') {
+
+      // Not authenticated — show password page for all requests
+      if (!authed) {
         return new Response(AUTH_PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } });
       }
     }

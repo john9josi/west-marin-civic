@@ -1295,10 +1295,9 @@ document.getElementById('reportLink').addEventListener('click', e => {
 // Show loading pulse on first paint
 document.getElementById('pill').classList.add('is-loading');
 
-// Dev bar visible on localhost only — hidden on prod
-if (location.hostname !== 'localhost') {
-  document.querySelector('.dev-bar').classList.add('is-hidden');
-}
+// Dev bar visible on localhost and staging Worker — hidden on prod
+const isDev = location.hostname === 'localhost' || location.hostname.includes('-dev.');
+if (!isDev) document.querySelector('.dev-bar').classList.add('is-hidden');
 
 refresh(); // scheduleNext() inside chains all future polls
 
