@@ -209,32 +209,62 @@ API responses are stamped with an `X-Cached-At` header when stored, so the app c
 
 ## Developer Tools
 
-A dev bar is built into the app with five buttons: Calm, Watch, Alert, Unknown, Live. It is **hidden from real users** — it only appears when:
-- You're running on `localhost`, or
-- The URL contains `?dev=1` (e.g., `westmarincivic.org?dev=1`)
+A dev bar is built into the app with five buttons: Calm, Watch, Alert, Unknown, Live. It is **hidden from real users** — it only appears on:
+- `localhost`
+- The staging Worker (`west-marin-civic-dev.john-b98.workers.dev`)
 
 The first four buttons load mock data so you can preview each state without waiting for a real event. The Live button triggers a fresh fetch from all APIs.
 
 ---
 
+## Environments
+
+| Environment | URL | Purpose |
+|---|---|---|
+| Production | `westmarincivic.org` | Live site — real users |
+| Staging | `west-marin-civic-dev.john-b98.workers.dev` | Review before shipping to prod |
+
+Staging is password-protected. Every visit prompts for the password (stored as `DEV_PASSWORD` secret on the staging Worker). The dev bar is visible on staging so you can switch between mock states.
+
+---
+
+## Deploy Workflow
+
+**Always follow this order:**
+
+1. Open a GitHub issue describing the change
+2. Make the change and commit to `main`
+3. Deploy to staging: `npx wrangler deploy --env dev`
+4. Review on staging — switch mock states with the dev bar
+5. Deploy to prod: `npx wrangler deploy`
+6. Push to GitHub: `git push origin main`
+7. Close the GitHub issue with the commit reference
+
+**Git is always the source of truth.** Never deploy without a commit first.
+
+---
+
+## Secrets
+
+| Secret | Worker | What it does |
+|---|---|---|
+| `KEY_511` | prod + dev | 511 SF Bay API key |
+| `DEV_PASSWORD` | dev only | Password gate for staging site |
+
+To set or rotate a secret:
+```bash
+echo "VALUE" | npx wrangler secret put SECRET_NAME           # prod
+echo "VALUE" | npx wrangler secret put SECRET_NAME --env dev # staging
+```
+
+---
+
 ## Deployment
 
-The app is deployed via Cloudflare Workers using the `wrangler` CLI.
-
-**To deploy:**
 ```bash
-npx wrangler deploy
+npx wrangler deploy           # prod (westmarincivic.org)
+npx wrangler deploy --env dev # staging only
 ```
-
-**The 511 API key** is stored as a Cloudflare Worker secret and never appears in the code:
-```bash
-echo "YOUR_KEY" | npx wrangler secret put KEY_511
-```
-
-**Routes:** The Worker responds to:
-- `westmarincivic.org/*`
-- `www.westmarincivic.org/*`
-- `west-marin-civic.john-b98.workers.dev` (fallback URL)
 
 ---
 
@@ -272,6 +302,65 @@ const FIRE_WATCH_EVENTS = ['Fire Weather Watch', 'YOUR NEW WATCH'];
 ```
 
 The exact strings must match the NWS `event` field. You can browse active alerts at `api.weather.gov/alerts/active?zone=CAZ505`.
+
+---
+
+## Sprint System (Usain)
+
+The project uses a scheduled AI agent ("Usain") to plan and build sprints automatically on a 2-week cycle.
+
+### Agents
+
+| Agent | Schedule | What it does |
+|---|---|---|
+| Usain Mode A (Planner) | Every other Monday 8am PT | Picks 2 issues from GitHub, writes a plan, emails for approval |
+| Usain Mode B (Builder) | Every other Wednesday 8am PT | Implements the 2 issues, deploys to staging, emails for review |
+
+Trigger IDs and config are managed via the Claude Code scheduled agents dashboard.
+
+### sprint-panel.json
+
+`sprint-panel.json` is the data contract between Usain and the app. After Mode B builds and deploys, it writes this file with `built: true`. The app reads it on load — if `built: true`, a "This Sprint" panel button appears in the UI showing what was built and preview buttons for each change.
+
+**Schema:**
+```json
+{
+  "built": true,
+  "sprint_start": "YYYY-MM-DD",
+  "retro": "...",
+  "backlog_health": "...",
+  "issues": [
+    {
+      "number": 16,
+      "title": "Issue title",
+      "effort": "S|M|L",
+      "meta": "Short description",
+      "body": "Implementation notes",
+      "preview_state": "alert",
+      "preview_target": ".css-selector"
+    }
+  ],
+  "blocker": "Optional blocker note",
+  "pr_url": "https://github.com/...",
+  "staging_url": "https://west-marin-civic-dev.john-b98.workers.dev"
+}
+```
+
+When `built: false` (default), the panel button is hidden.
+
+---
+
+## Health Monitor
+
+A GitHub Actions workflow (`.github/workflows/monitor.yml`) runs every 6 hours and checks:
+
+1. `westmarincivic.org` returns 200 with expected content
+2. `/api/511` returns 200 with valid JSON
+3. PG&E ArcGIS API is reachable (warning only — doesn't fail the job)
+
+On failure: opens a GitHub issue tagged `bug, automated, critical`. If a matching open issue already exists, adds a comment instead of opening a duplicate.
+
+On recovery: closes the open issue automatically with a comment.
 
 ---
 
