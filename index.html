@@ -1295,22 +1295,10 @@ document.getElementById('reportLink').addEventListener('click', e => {
 // Show loading pulse on first paint
 document.getElementById('pill').classList.add('is-loading');
 
-// Hide dev bar — show on localhost, or if session is unlocked via password
-(function() {
-  const DEV_KEY = 'wmc_dev_unlocked';
-  const params = new URLSearchParams(location.search);
-  if (params.get('dev') === '1') {
-    const pwd = prompt('Dev password:');
-    if (pwd === '25Vallejo!') {
-      sessionStorage.setItem(DEV_KEY, '1');
-    }
-    // Strip ?dev=1 from URL without reload
-    const clean = location.pathname + location.search.replace(/[?&]dev=1/, '').replace(/^&/, '?');
-    history.replaceState(null, '', clean || location.pathname);
-  }
-  const unlocked = location.hostname === 'localhost' || sessionStorage.getItem(DEV_KEY) === '1';
-  if (!unlocked) document.querySelector('.dev-bar').classList.add('is-hidden');
-})();
+// Dev bar visible on localhost only — hidden on prod
+if (location.hostname !== 'localhost') {
+  document.querySelector('.dev-bar').classList.add('is-hidden');
+}
 
 refresh(); // scheduleNext() inside chains all future polls
 
