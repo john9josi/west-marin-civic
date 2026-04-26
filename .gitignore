@@ -5,3 +5,7 @@
 
 # Local Claude settings (contains secrets)
 .claude/settings.local.json
+
+# Local dev scratch files
+outage-options.html
+preview.html
