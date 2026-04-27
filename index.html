@@ -500,13 +500,13 @@ body {
     <p class="about-body">Share it with a friend. Give feedback. Donate.</p>
 
     <div class="cta-row" style="margin-top:16px;">
-      <a class="cta-btn secondary" href="sms:&body=Check%20out%20West%20Marin%20Civic%20%E2%80%94%20real-time%20road%2C%20fire%2C%20and%20weather%20status%20for%20West%20Marin%3A%20https%3A%2F%2Fwestmarincivic.org">
+      <a class="cta-btn secondary" href="sms:&body=Check%20out%20West%20Marin%20Civic%20%E2%80%94%20real-time%20road%2C%20fire%2C%20and%20weather%20status%20for%20West%20Marin%3A%20https%3A%2F%2Fwestmarincivic.org" onclick="if(typeof gtag!=='undefined')gtag('event','share_clicked')">
         <span class="cta-icon">💬</span>Share with a neighbor
       </a>
-      <a class="cta-btn secondary" href="mailto:hello@westmarincivic.org?subject=West%20Marin%20Civic%20Feedback">
+      <a class="cta-btn secondary" href="mailto:hello@westmarincivic.org?subject=West%20Marin%20Civic%20Feedback" onclick="if(typeof gtag!=='undefined')gtag('event','feedback_clicked')">
         <span class="cta-icon">📬</span>Share your 2 cents
       </a>
-      <a class="cta-btn primary" href="https://buymeacoffee.com/westmarincivic" target="_blank" rel="noopener">
+      <a class="cta-btn primary" href="https://buymeacoffee.com/westmarincivic" target="_blank" rel="noopener" onclick="if(typeof gtag!=='undefined')gtag('event','donate_clicked')">
         <span class="cta-icon">☕</span>Donate
       </a>
     </div>
@@ -1108,6 +1108,7 @@ document.getElementById('pill').addEventListener('click', () => {
   const pill = document.getElementById('pill');
   const tray = document.getElementById('pillTray');
   const open = pill.classList.contains('is-open');
+  if (!open && typeof gtag !== 'undefined') gtag('event', 'pill_tapped', { pill_state: currentLevel });
   pill.classList.toggle('is-open', !open);
   pill.setAttribute('aria-expanded', String(!open));
   tray.classList.toggle('is-open', !open);
@@ -1333,6 +1334,7 @@ document.querySelectorAll('.from-card-link[data-tab]').forEach(link =>
 document.querySelectorAll('.nav-tab').forEach(tab =>
   tab.addEventListener('click', () => {
     switchTab(tab.dataset.tab);
+    if (typeof gtag !== 'undefined') gtag('event', 'tab_switched', { tab: tab.dataset.tab });
   })
 );
 
