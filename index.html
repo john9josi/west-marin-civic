@@ -244,6 +244,18 @@ body {
 .pge-link { font-size: 12px; color: var(--sky); text-decoration: none; letter-spacing: .01em; }
 .pge-link:hover, .pge-link:focus { text-decoration: underline; }
 
+/* ------------------------------------------------------------------ EVAC ZONES */
+.evac-zone-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 6px; font-size: 16px; padding: 12px 0;
+  border-bottom: 0.5px solid var(--divider);
+}
+.evac-zone-row:last-child { border-bottom: none; }
+.evac-zone-name { color: var(--forest); font-weight: 600; min-width: 0; flex-shrink: 1; }
+.evac-zone-status { font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.evac-zone-status.r { color: var(--red); }
+.evac-zone-status.a { color: var(--amber); }
+
 /* ------------------------------------------------------------------ STATE VISIBILITY */
 .only-alert { display: none; }
 [data-state="alert"]   .only-alert { display: block; }
@@ -451,6 +463,12 @@ body {
       </a>
     </div>
 
+    <!-- Evacuation zones (alert only, populated by fetchMarinEvacZones) -->
+    <div id="evacZonesSection" style="display:none">
+      <div class="section-head">Evacuation Zones</div>
+      <div id="evacZonesGrid"></div>
+    </div>
+
     <!-- From West Marin Civic -->
     <div class="hide-alert">
       <div class="section-head">From West Marin Civic</div>
@@ -630,6 +648,10 @@ const MOCK = {
     ],
     feeds: { '511':{age:'1m',state:'live'}, 'NWS':{age:'2m',state:'live'}, 'WFIGS':{age:'12m',state:'live'}, 'PGE':{age:'2m',state:'live'} },
     feedSummary: null,
+    evacZones: [
+      { name: 'Zone A — Marshall', status: 'Order' },
+      { name: 'Zone B — Inverness', status: 'Warning' },
+    ],
   },
   unknown: {
     level: 'unknown', pillTitle: 'Status unknown', pillSub: 'Feeds offline · call 911 for emergencies',
@@ -891,6 +913,26 @@ async function fetchPGE() {
 }
 
 // ============================================================
+// MARIN COUNTY EVACUATION ZONES  (OES ArcGIS, active Warning/Order zones only)
+// ============================================================
+
+async function fetchMarinEvacZones() {
+  const base = 'https://services1.arcgis.com/XN6gGLuLuV3hmFJy/arcgis/rest/services/Evacuation_Zones/FeatureServer/0/query';
+  const url  = `${base}?where=1%3D1&outFields=*&returnGeometry=false&f=json`;
+  const res  = await fetchWithTimeout(url, {}, 10000);
+  if (!res.ok) throw new Error('Marin evac zones ' + res.status);
+  const data = await res.json();
+  const features = (data.features || []).filter(f => f.attributes);
+  const ACTIVE_STATUSES = ['Warning', 'Order', 'WARNING', 'ORDER'];
+  return features.map(f => {
+    const a = f.attributes;
+    const name   = a.ZoneName || a.ZONE_NAME || a.Zone_Name || a.Name || a.LABEL || 'Zone';
+    const status = a.EvacStatus || a.EVACSTATUS || a.STATUS || a.Evacuation_Status || '';
+    return { name, status };
+  }).filter(z => ACTIVE_STATUSES.includes(z.status));
+}
+
+// ============================================================
 // STATE BUILDER
 // ============================================================
 
@@ -919,7 +961,7 @@ function wxEmoji(sf, windMph, level) {
   return '☀️';
 }
 
-function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge) {
+function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge, evacZones = []) {
   // --- level ---
   let level = nwsAlert?.level || 'calm';
   if (fire) level = 'alert';
@@ -940,6 +982,15 @@ function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge) {
   } else {
     pillTitle = 'All clear';
     pillSub   = `Inverness · ${timeNow()}`;
+  }
+
+  // Feed freshness suffix on pill during alert — show data age if >2 min old (#4)
+  if (level === 'alert') {
+    const liveTimes = Object.values(fresh).filter(f => f.at && f.ok).map(f => f.at);
+    if (liveTimes.length) {
+      const ageMin = Math.floor((Date.now() - Math.max(...liveTimes)) / 60000);
+      if (ageMin > 2) pillSub += ` · updated ${ageMin}m ago`;
+    }
   }
 
   // --- weather line ---
@@ -984,7 +1035,7 @@ function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge) {
     : anyOff  ? `⚠ Some feeds offline`
     : 'Feeds updating…';
 
-  return { level, pillTitle, pillSub, wxIcon, wxText, wxWarn, roads, feeds, feedSummary, pge };
+  return { level, pillTitle, pillSub, wxIcon, wxText, wxWarn, roads, feeds, feedSummary, pge, evacZones };
 }
 
 // ============================================================
@@ -1007,6 +1058,7 @@ function renderUnknown() {
       'PGE':   { age: ageStr(fresh['PGE'].at),   state: 'off' },
     },
     feedSummary: '⚠ All feeds offline · check your connection',
+    evacZones: [],
   });
 }
 
@@ -1073,6 +1125,25 @@ function render(d) {
     powerEl.innerHTML = '';
   }
 
+  // Evac zones section
+  const evacSection = document.getElementById('evacZonesSection');
+  const evacGrid    = document.getElementById('evacZonesGrid');
+  if (d.evacZones && d.evacZones.length > 0 && d.level === 'alert') {
+    evacSection.style.display = 'block';
+    evacGrid.innerHTML = d.evacZones.map(z => {
+      const isOrder = /order/i.test(z.status);
+      const cls = isOrder ? 'r' : 'a';
+      const icon = isOrder ? '⛔ ' : '⚠ ';
+      const label = isOrder ? 'Evacuation Order' : 'Evacuation Warning';
+      return `<div class="evac-zone-row">
+        <span class="evac-zone-name">${esc(z.name)}</span>
+        <span class="evac-zone-status ${cls}">${icon}${label}</span>
+      </div>`;
+    }).join('');
+  } else {
+    evacSection.style.display = 'none';
+  }
+
   // Auto-open on alert (first time); close when level drops below alert
   if (d.level === 'alert' && !wasOpen) {
     pill.classList.add('is-open');
@@ -1121,12 +1192,13 @@ document.getElementById('pill').addEventListener('click', () => {
 
 async function refresh() {
   try {
-    const [rNWSAlert, rNWSWx, r511, rWFIGS, rPGE] = await Promise.allSettled([
+    const [rNWSAlert, rNWSWx, r511, rWFIGS, rPGE, rEvac] = await Promise.allSettled([
       fetchNWSAlerts(),
       fetchNWSWeather(),
       fetch511().then(({ raw, cachedAt }) => ({ roads: parse511Roads(raw), cachedAt })),
       fetchWFIGS(),
       fetchPGE(),
+      fetchMarinEvacZones(),
     ]);
 
     const nwsOk = rNWSAlert.status === 'fulfilled' && rNWSWx.status === 'fulfilled';
@@ -1150,7 +1222,8 @@ async function refresh() {
         has511                           ? r511.value.roads   : {},
         rWFIGS.status    === 'fulfilled' ? rWFIGS.value?.fire : null,
         has511,
-        rPGE.status === 'fulfilled' ? rPGE.value : null,
+        rPGE.status   === 'fulfilled' ? rPGE.value   : null,
+        rEvac.status  === 'fulfilled' ? rEvac.value  : [],
       );
       currentLevel = state.level;
       render(state);
