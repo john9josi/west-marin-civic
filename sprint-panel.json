@@ -24,6 +24,6 @@
     }
   ],
   "blocker": "CLOUDFLARE_API_TOKEN not available in build environment — deploy to staging/prod requires running 'npx wrangler deploy' locally or via CI with the token set.",
-  "pr_url": "https://github.com/john9josi/west-marin-civic/pulls",
+  "pr_url": "https://github.com/john9josi/west-marin-civic/pull/31",
   "staging_url": "https://west-marin-civic.john-b98.workers.dev"
 }
