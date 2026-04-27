@@ -1,3 +1,29 @@
 {
-  "built": false
+  "built": true,
+  "sprint_start": "2026-04-27",
+  "retro": "Clean — no automated issues, no stale sprint branches, no actionable user feedback.",
+  "backlog_health": "Healthy — 5 S-effort issues remain (#3 PWA prompt, #6 camera links, #9 status link, #10, #11); one L-effort issue (#8 push notifications).",
+  "issues": [
+    {
+      "number": 2,
+      "title": "Evacuation zones during alerts",
+      "effort": "M",
+      "meta": "Shows active Marin County evac zones (Warning/Order) below Contacts during alert state",
+      "body": "Adds fetchMarinEvacZones() calling Marin County OES ArcGIS. Active zones render as color-coded rows (red = Order, amber = Warning) in a new section below the emergency contact buttons. Section stays hidden when no active zones or outside alert state.",
+      "preview_state": "alert",
+      "preview_target": "#evacZonesSection"
+    },
+    {
+      "number": 4,
+      "title": "Feed freshness on pill sub-line",
+      "effort": "S",
+      "meta": "Appends '· updated Xm ago' to pill sub-line during alert when newest feed is >2 min old",
+      "body": "During alert state, buildState() now computes the age of the most recently refreshed live feed. If that age exceeds 2 minutes, the timestamp is appended to the pill sub-line so users can gauge data freshness at a glance without scrolling to the feed footer.",
+      "preview_state": "alert",
+      "preview_target": "#pillSub"
+    }
+  ],
+  "blocker": "CLOUDFLARE_API_TOKEN not available in build environment — deploy to staging/prod requires running 'npx wrangler deploy' locally or via CI with the token set.",
+  "pr_url": "https://github.com/john9josi/west-marin-civic/pulls",
+  "staging_url": "https://west-marin-civic.john-b98.workers.dev"
 }
