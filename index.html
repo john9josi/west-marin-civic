@@ -569,8 +569,8 @@ function inWestMarin(coords) {
 // Keyword matchers — use regex with word boundaries for Hwy 1 to avoid CA-11, CA-13, CA-116 etc.
 // lat: [minLat, maxLat] distinguishes Hwy 1 North vs South at ~38.04 (Olema)
 const ROAD_MATCHERS = [
-  { id: 'hwy1n',  re: /\b(highway\s*1|hwy\s*1|ca-1|route\s*1)\b/i, lat: [38.04, 99] },
-  { id: 'hwy1s',  re: /\b(highway\s*1|hwy\s*1|ca-1|route\s*1)\b/i, lat: [-99, 38.04] },
+  { id: 'hwy1n',  re: /\b(highway\s*1|hwy\s*1|ca-1|route\s*1)\b/i, lat: [38.055, 99] },
+  { id: 'hwy1s',  re: /\b(highway\s*1|hwy\s*1|ca-1|route\s*1)\b/i, lat: [-99, 38.055] },
   { id: 'sfd',    re: /sir\s*francis\s*drake|francis\s*drake/i },
   { id: 'bv',     re: /bear\s*valley/i },
   { id: 'prp',    re: /point\s*reyes.petaluma|reyes.petaluma/i },
