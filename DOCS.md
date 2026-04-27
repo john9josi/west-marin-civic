@@ -50,7 +50,7 @@ The Cloudflare Worker does two things:
 
 ## Data Sources
 
-The app polls three external APIs every 5 minutes (every 60 seconds during an active alert).
+The app polls four external APIs every 5 minutes (every 60 seconds during an active alert). The Marin County OES evacuation zones endpoint is also polled each cycle but is only displayed during active alert state.
 
 ### 1. NWS — National Weather Service
 **What it provides:** Fire weather alerts + current conditions for Point Reyes  
@@ -101,7 +101,18 @@ Each event that passes the bounding box is matched to one of the 11 roads in the
 
 ---
 
-### 3. WFIGS — Wildland Fire Incident Data
+### 3. Marin County OES — Evacuation Zones
+**What it provides:** Active evacuation zones (Warning / Order) during emergencies  
+**Endpoint:** Marin County OES ArcGIS FeatureServer, queried with `where=1=1` to fetch all features  
+**Filter:** Client-side — only zones with `EvacStatus` of `Warning` or `Order` are displayed  
+**Display:** Shown as color-coded rows below the Emergency Contacts section, but only when state is `alert` and at least one active zone is returned. Section is hidden otherwise.  
+**Cost:** Free. No API key required.
+
+Field names are normalized client-side across common Marin County ArcGIS field variants (`ZoneName`, `ZONE_NAME`, `Zone_Name`, `EvacStatus`, `EVACSTATUS`).
+
+---
+
+### 4. WFIGS — Wildland Fire Incident Data
 **What it provides:** Active wildfires (name, acres, % contained, last updated)  
 **Endpoint:** NIFC ArcGIS FeatureServer, queried with a West Marin bounding box  
 **Cost:** Free. No API key required.
@@ -155,6 +166,8 @@ The app is always in one of four states. The state determines the pill color, th
 | `unknown` | 🟠 Orange | All 3 feeds fail for 2 consecutive cycles | Every 5 minutes |
 
 **State priority:** Fire (WFIGS) beats NWS alert. If WFIGS reports an active fire and NWS only has a Watch, the app goes to Alert.
+
+**Feed freshness on pill:** During `alert` state, if the newest live feed is older than 2 minutes, `· updated Xm ago` is appended to the pill sub-line so users can gauge data age without scrolling to the feed footer.
 
 **Blackout logic:** The app doesn't go to Unknown on the first failure — it requires all three feeds to fail twice in a row. This prevents a single bad network request from triggering the emergency state.
 
