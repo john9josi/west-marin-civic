@@ -417,6 +417,12 @@ body {
       <span id="wxText">Connecting…</span>
     </div>
 
+    <!-- Evacuation zones (alert only, populated by fetchMarinEvacZones) -->
+    <div id="evacZonesSection" style="display:none">
+      <div class="section-head">Evacuation Zones</div>
+      <div id="evacZonesGrid"></div>
+    </div>
+
     <button class="pill" id="pill" data-pill="calm" aria-expanded="false" aria-controls="pillTray">
       <span class="pill-dot"></span>
       <span class="pill-body">
@@ -461,12 +467,6 @@ body {
         <span class="call-icon" aria-hidden="true">☎</span>
         <span><span class="call-label">Marin Fire Hotline</span><span class="call-sub" style="display:block">(415) 473-7191</span></span>
       </a>
-    </div>
-
-    <!-- Evacuation zones (alert only, populated by fetchMarinEvacZones) -->
-    <div id="evacZonesSection" style="display:none">
-      <div class="section-head">Evacuation Zones</div>
-      <div id="evacZonesGrid"></div>
     </div>
 
     <!-- From West Marin Civic -->
