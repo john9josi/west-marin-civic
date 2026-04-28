@@ -1,5 +1,17 @@
 # West Marin Civic — Claude Instructions
 
+## Issue body convention for API-dependent features
+
+Any issue that requires a new or unverified external data source must include a `Data source:` line in the body:
+
+```
+Data source: https://api.example.com/endpoint?params
+```
+
+This allows Usain to verify the endpoint is live and returns the expected fields before selecting the issue for a sprint. Without this line, Usain cannot verify the data and should treat the issue as unverifiable.
+
+---
+
 ## Issue-first workflow (mandatory)
 
 **Before writing any code or editing any file, open a GitHub issue first.**
