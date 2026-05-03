@@ -1,0 +1,9 @@
+{
+  // Minimal wrangler config for tests — no assets binding so miniflare
+  // doesn't try to load the entire project directory as static files.
+  // All worker routing tests use paths that return before reaching ASSETS.fetch.
+  "name": "west-marin-civic-test",
+  "main": "worker.js",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat"]
+}
