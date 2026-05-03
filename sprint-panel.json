@@ -1,29 +1,29 @@
 {
   "built": true,
-  "sprint_start": "2026-04-27",
-  "retro": "Clean — no automated issues, no stale sprint branches, no actionable user feedback.",
-  "backlog_health": "Healthy — 5 S-effort issues remain (#3 PWA prompt, #6 camera links, #9 status link, #10, #11); one L-effort issue (#8 push notifications).",
+  "sprint_start": "2026-05-03",
+  "retro": "Clean. No open automated issues, no stale sprint branches. plan/2026-04-29 merged same day.",
+  "backlog_health": "Healthy. Five S-effort issues remain (#3, #6, #9, #48, #50). No exhausted S tier. No vague L-effort issues.",
   "issues": [
     {
-      "number": 2,
-      "title": "Evacuation zones during alerts",
-      "effort": "M",
-      "meta": "Shows active Marin County evac zones (Warning/Order) below Contacts during alert state",
-      "body": "Adds fetchMarinEvacZones() calling Marin County OES ArcGIS. Active zones render as color-coded rows (red = Order, amber = Warning) in a new section below the emergency contact buttons. Section stays hidden when no active zones or outside alert state.",
-      "preview_state": "alert",
-      "preview_target": "#evacZonesSection"
+      "number": 37,
+      "title": "Security: fix staging cookie token and add CSP header",
+      "effort": "S",
+      "meta": "worker.js — SHA-256 session token + Content-Security-Policy",
+      "body": "wmc_dev_auth cookie now stores a SHA-256 hash of the password (never the raw value). CSP header added to all HTML responses covering script-src, connect-src, frame-ancestors 'none', and form-action 'self'.",
+      "preview_state": "calm",
+      "preview_target": ".feed-footer"
     },
     {
-      "number": 4,
-      "title": "Feed freshness on pill sub-line",
-      "effort": "S",
-      "meta": "Appends '· updated Xm ago' to pill sub-line during alert when newest feed is >2 min old",
-      "body": "During alert state, buildState() now computes the age of the most recently refreshed live feed. If that age exceeds 2 minutes, the timestamp is appended to the pill sub-line so users can gauge data freshness at a glance without scrolling to the feed footer.",
-      "preview_state": "alert",
-      "preview_target": "#pillSub"
+      "number": 30,
+      "title": "Add automated tests for data parsing and worker routing",
+      "effort": "M",
+      "meta": "src/lib.js + tests/ + GitHub Actions — 46 tests total",
+      "body": "Pure functions extracted to src/lib.js. 37 unit tests cover parse511Roads, buildState, ageStr, dotState, parseUntilStr, inWestMarin. 9 worker tests (miniflare) cover CORS, .git 404, auth gate, and SHA-256 cookie. GitHub Actions runs npm test on every push to main.",
+      "preview_state": null,
+      "preview_target": null
     }
   ],
-  "blocker": "CLOUDFLARE_API_TOKEN not available in build environment — deploy to staging/prod requires running 'npx wrangler deploy' locally or via CI with the token set.",
-  "pr_url": "https://github.com/john9josi/west-marin-civic/pull/31",
-  "staging_url": "https://west-marin-civic.john-b98.workers.dev"
+  "blocker": "CLOUDFLARE_API_TOKEN not available in build env — staging deploy requires manual: npx wrangler deploy --env dev",
+  "pr_url": "https://github.com/john9josi/west-marin-civic/pull/55",
+  "staging_url": "https://west-marin-civic-dev.john-b98.workers.dev"
 }
