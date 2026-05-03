@@ -6,6 +6,19 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+// CSP covering all external origins used by the app (GA, CF beacon, NWS, ArcGIS, PGE)
+const CSP = [
+  "default-src 'none'",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://static.cloudflareinsights.com https://www.google-analytics.com",
+  "connect-src 'self' https://api.weather.gov https://services3.arcgis.com https://ags.pge.esriemcs.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://cloudflareinsights.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
 const AUTH_PAGE = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,13 +52,33 @@ function getCookie(request, name) {
   return match ? match[1] : null;
 }
 
+// Returns hex-encoded SHA-256 of 'wmc:<password>' so the raw password never appears in a cookie
+async function tokenFor(password) {
+  const data = new TextEncoder().encode('wmc:' + password);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function withCSP(response) {
+  const r = new Response(response.body, response);
+  r.headers.set('Content-Security-Policy', CSP);
+  return r;
+}
+
+function htmlResponse(body, init) {
+  const r = new Response(body, init);
+  r.headers.set('Content-Security-Policy', CSP);
+  return r;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     // Dev environment: gate all requests behind a password + cookie session
     if (env.DEV_PASSWORD) {
-      const authed = getCookie(request, 'wmc_dev_auth') === env.DEV_PASSWORD;
+      const token  = await tokenFor(env.DEV_PASSWORD);
+      const authed = getCookie(request, 'wmc_dev_auth') === token;
 
       // Handle login form POST
       if (request.method === 'POST' && url.pathname === '/__auth') {
@@ -55,17 +88,17 @@ export default {
             status: 302,
             headers: {
               'Location': '/',
-              'Set-Cookie': `wmc_dev_auth=${env.DEV_PASSWORD}; Path=/; HttpOnly; SameSite=Strict`,
+              'Set-Cookie': `wmc_dev_auth=${token}; Path=/; HttpOnly; SameSite=Strict`,
             },
           });
         }
         const page = AUTH_PAGE.replace('display: none', 'display: block');
-        return new Response(page, { status: 401, headers: { 'Content-Type': 'text/html' } });
+        return htmlResponse(page, { status: 401, headers: { 'Content-Type': 'text/html' } });
       }
 
       // Not authenticated — show password page for all requests
       if (!authed) {
-        return new Response(AUTH_PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } });
+        return htmlResponse(AUTH_PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } });
       }
     }
 
@@ -106,7 +139,10 @@ export default {
       }
     }
 
-    // All other requests: serve static assets
-    return env.ASSETS.fetch(request);
+    // All other requests: serve static assets, adding CSP to HTML responses
+    const assetResponse = await env.ASSETS.fetch(request);
+    const ct = assetResponse.headers.get('Content-Type') || '';
+    if (!ct.includes('text/html')) return assetResponse;
+    return withCSP(assetResponse);
   },
 };
