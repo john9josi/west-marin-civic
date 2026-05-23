@@ -43,33 +43,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Dev environment: gate all requests behind a password + cookie session
-    if (env.DEV_PASSWORD) {
-      const authed = getCookie(request, 'wmc_dev_auth') === env.DEV_PASSWORD;
-
-      // Handle login form POST
-      if (request.method === 'POST' && url.pathname === '/__auth') {
-        const body = await request.formData();
-        if (body.get('pwd') === env.DEV_PASSWORD) {
-          return new Response(null, {
-            status: 302,
-            headers: {
-              'Location': '/',
-              'Set-Cookie': `wmc_dev_auth=${env.DEV_PASSWORD}; Path=/; HttpOnly; SameSite=Strict`,
-            },
-          });
-        }
-        const page = AUTH_PAGE.replace('display: none', 'display: block');
-        return new Response(page, { status: 401, headers: { 'Content-Type': 'text/html' } });
-      }
-
-      // Not authenticated — show password page for all requests
-      if (!authed) {
-        return new Response(AUTH_PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } });
-      }
-    }
-
-    // Slack notification proxy: POST /notify
+    // Slack notification proxy: POST /notify (before auth gate — uses its own secret)
     if (url.pathname === '/notify') {
       if (request.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: CORS });
@@ -116,6 +90,32 @@ export default {
       }
 
       return new Response('ok', { status: 200 });
+    }
+
+    // Dev environment: gate all requests behind a password + cookie session
+    if (env.DEV_PASSWORD) {
+      const authed = getCookie(request, 'wmc_dev_auth') === env.DEV_PASSWORD;
+
+      // Handle login form POST
+      if (request.method === 'POST' && url.pathname === '/__auth') {
+        const body = await request.formData();
+        if (body.get('pwd') === env.DEV_PASSWORD) {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              'Location': '/',
+              'Set-Cookie': `wmc_dev_auth=${env.DEV_PASSWORD}; Path=/; HttpOnly; SameSite=Strict`,
+            },
+          });
+        }
+        const page = AUTH_PAGE.replace('display: none', 'display: block');
+        return new Response(page, { status: 401, headers: { 'Content-Type': 'text/html' } });
+      }
+
+      // Not authenticated — show password page for all requests
+      if (!authed) {
+        return new Response(AUTH_PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } });
+      }
     }
 
     // Block .git and .wrangler directory traversal
