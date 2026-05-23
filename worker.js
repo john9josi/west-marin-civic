@@ -126,8 +126,6 @@ export default {
 
       const event = payload.event || {};
 
-      // Log event shape for debugging
-      console.log('slack event:', JSON.stringify({ type: event.type, subtype: event.subtype, bot_id: event.bot_id, thread_ts: event.thread_ts, ts: event.ts, has_text: !!event.text }));
 
       // Only handle human messages — ignore bot messages and subtypes (joins, leaves, etc.)
       if (
@@ -143,10 +141,9 @@ export default {
         return new Response('GITHUB_TOKEN not configured', { status: 500 });
       }
 
-      const userName = event.user || 'someone';
-      const commentBody = `💬 **Slack reply from ${userName}:**\n\n${event.text}`;
+      const commentBody = `💬 **Slack reply:**\n\n${event.text}`;
 
-      const ghRes = await fetch('https://api.github.com/repos/john9josi/west-marin-civic/issues/60/comments', {
+      await fetch('https://api.github.com/repos/john9josi/west-marin-civic/issues/60/comments', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${githubToken}`,
@@ -155,7 +152,6 @@ export default {
         },
         body: JSON.stringify({ body: commentBody }),
       });
-      console.log('github response:', ghRes.status, await ghRes.text());
 
       return new Response('ok', { status: 200 });
     }
