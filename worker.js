@@ -69,6 +69,55 @@ export default {
       }
     }
 
+    // Slack notification proxy: POST /notify
+    if (url.pathname === '/notify') {
+      if (request.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: CORS });
+      }
+      if (request.method !== 'POST') {
+        return new Response('Method not allowed', { status: 405 });
+      }
+
+      const secret = env.NOTIFY_SECRET;
+      if (!secret) {
+        return new Response('NOTIFY_SECRET not configured', { status: 500 });
+      }
+
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return new Response('Invalid JSON', { status: 400 });
+      }
+
+      if (body.secret !== secret) {
+        return new Response('Unauthorized', { status: 401 });
+      }
+
+      const webhookUrl = env.SLACK_WEBHOOK;
+      if (!webhookUrl) {
+        return new Response('SLACK_WEBHOOK not configured', { status: 500 });
+      }
+
+      const slackPayload = {
+        text: body.text,
+        username: body.username || 'WMC Agent',
+        icon_emoji: body.icon_emoji || ':robot_face:',
+      };
+
+      const slackRes = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(slackPayload),
+      });
+
+      if (!slackRes.ok) {
+        return new Response('Slack error: ' + slackRes.status, { status: 502 });
+      }
+
+      return new Response('ok', { status: 200 });
+    }
+
     // Block .git and .wrangler directory traversal
     if (url.pathname.startsWith('/.git') || url.pathname.startsWith('/.wrangler')) {
       return new Response('Not found', { status: 404 });
