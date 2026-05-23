@@ -1,6 +1,6 @@
 {
-  "sprint_active": false,
-  "sprint_start": "2026-04-29",
+  "sprint_active": true,
+  "sprint_start": "2026-05-03",
   "issues": [
     {"number": 30, "title": "Add automated tests for data parsing and worker routing"},
     {"number": 37, "title": "Security: fix staging cookie token and add CSP header"}

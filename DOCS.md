@@ -38,13 +38,20 @@ The Cloudflare Worker does two things:
 
 | File | What it does |
 |---|---|
-| `index.html` | The entire app — HTML, CSS, and JavaScript in one file |
-| `worker.js` | Cloudflare Worker — serves the app and proxies the 511 API |
+| `index.html` | App HTML, CSS, and JavaScript (imports pure logic from `src/lib.js`) |
+| `src/lib.js` | Pure data-parsing functions: `parse511Roads`, `buildState`, `ageStr`, `dotState`, `parseUntilStr`, `inWestMarin` and related helpers |
+| `worker.js` | Cloudflare Worker — serves the app, proxies 511 API, auth gate for staging |
 | `wrangler.jsonc` | Cloudflare deployment config (Worker name, routes, settings) |
-| `sw.js` | Service Worker — caches the app shell for offline use |
+| `sw.js` | Service Worker — caches the app shell (including `src/lib.js`) for offline use |
 | `manifest.json` | PWA metadata — app name, icon, colors, install behavior |
 | `icon.svg` | App icon (used on home screen when installed) |
 | `config.js` | Empty placeholder — API key moved to Cloudflare secret |
+| `package.json` | Dev dependencies: Vitest + `@cloudflare/vitest-pool-workers` |
+| `vitest.workspace.js` | Vitest workspace: unit tests (Node) + worker tests (miniflare) |
+| `tests/lib.test.js` | 37 unit tests for pure functions in `src/lib.js` |
+| `tests/worker-routing.test.js` | Worker routing tests: `.git` 404, CORS, 511 proxy |
+| `tests/worker-auth.test.js` | Auth gate tests: password form, session cookie, CSP |
+| `.github/workflows/test.yml` | CI: runs `npm test` on every push to main and on PRs |
 
 ---
 
@@ -237,7 +244,7 @@ The first four buttons load mock data so you can preview each state without wait
 | Production | `westmarincivic.org` | Live site — real users |
 | Staging | `west-marin-civic-dev.john-b98.workers.dev` | Review before shipping to prod |
 
-Staging is password-protected. Every visit prompts for the password (stored as `DEV_PASSWORD` secret on the staging Worker). The dev bar is visible on staging so you can switch between mock states.
+Staging is password-protected. Every visit prompts for the password (stored as `DEV_PASSWORD` secret on the staging Worker). The auth cookie stores a SHA-256 hash of the password — the raw value never appears in the browser. The dev bar is visible on staging so you can switch between mock states.
 
 ---
 
