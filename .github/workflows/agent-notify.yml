@@ -10,14 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Post to Slack
-        uses: slackapi/slack-github-action@v3
-        with:
-          method: webhook
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            {
-              "text": "${{ github.event.comment.body }}",
-              "username": "${{ github.event.comment.user.login }}",
-              "icon_emoji": ":robot_face:"
-            }
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$PAYLOAD"
+        env:
+          PAYLOAD: ${{ toJSON(format('{{"text":"{0}","username":"{1}","icon_emoji":":robot_face:"}}', github.event.comment.body, github.event.comment.user.login)) }}
