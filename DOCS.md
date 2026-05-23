@@ -270,6 +270,10 @@ Staging is password-protected. Every visit prompts for the password (stored as `
 |---|---|---|
 | `KEY_511` | prod + dev | 511 SF Bay API key |
 | `DEV_PASSWORD` | dev only | Password gate for staging site |
+| `NOTIFY_SECRET` | prod + dev | Shared secret for /notify endpoint |
+| `SLACK_WEBHOOK` | prod + dev | Slack webhook URL used by /notify |
+| `SLACK_SIGNING_SECRET` | prod | Verifies Slack Events API payloads on /slack-reply |
+| `GITHUB_TOKEN` | prod | Fine-grained PAT (Issues: read+write) for posting to issue #60 |
 
 To set or rotate a secret:
 ```bash
@@ -325,18 +329,69 @@ The exact strings must match the NWS `event` field. You can browse active alerts
 
 ---
 
-## Sprint System (Usain)
+## Sprint System
 
-The project uses a scheduled AI agent ("Usain") to plan and build sprints automatically on a 2-week cycle.
+The project uses four scheduled AI agents to manage the sprint cycle automatically.
 
 ### Agents
 
 | Agent | Schedule | What it does |
 |---|---|---|
-| Usain Mode A (Planner) | Every other Monday 8am PT | Picks 2 issues from GitHub, writes a plan, emails for approval |
-| Usain Mode B (Builder) | Every other Wednesday 8am PT | Implements the 2 issues, deploys to staging, emails for review |
+| Switzer | Every Sunday 8am PT | Grooms backlog — verifies external data sources and adds `Data source:` lines so Usain can plan without blocking |
+| Usain | Mon + Wed 8am PT | Mode A: picks 2 issues, opens a plan PR. Mode B: builds, deploys to staging. Mode C: nudges if plan PR is stale |
+| Kipchoge | Mon + Wed 10am PT | Reviews plan and sprint PRs — posts APPROVED or BLOCKED before anything merges |
+| Prefontaine | Every Friday 9am PT | Monitors agent health for the week, suggests prompt improvements |
 
-Trigger IDs and config are managed via the Claude Code scheduled agents dashboard.
+All agents are managed via the Claude Code scheduled agents dashboard (claude.ai/code/routines).
+
+### Notification Architecture
+
+Agents cannot make outbound HTTP calls (CCR network restriction). Instead they use a GitHub issue as a message bus:
+
+```
+CCR agent
+    │
+    └── gh issue comment 60  (GitHub issue #60 — "Agent Notifications")
+            │
+            ▼
+    GitHub Actions (agent-notify.yml)
+    fires on issue_comment event
+            │
+            ▼
+    Slack #gh-wmc (via SLACK_WEBHOOK_URL secret)
+```
+
+To reply from Slack back to agents:
+
+```
+Slack thread reply in #gh-wmc
+    │
+    ▼
+Slack Events API → POST westmarincivic.org/slack-reply
+    │
+    ▼
+Cloudflare Worker verifies Slack signature
+    │
+    ▼
+GitHub issue #60 comment (agents read on next run)
+```
+
+### Worker Endpoints
+
+| Endpoint | Auth | What it does |
+|---|---|---|
+| `POST /notify` | `NOTIFY_SECRET` body field | Slack notification proxy (for non-CCR callers) |
+| `POST /slack-reply` | Slack signing secret (`SLACK_SIGNING_SECRET`) | Receives Slack thread replies, posts to issue #60 |
+
+### Secrets
+
+| Secret | Where | What it does |
+|---|---|---|
+| `SLACK_WEBHOOK_URL` | GitHub repo secret | Webhook for posting to #gh-wmc |
+| `SLACK_SIGNING_SECRET` | Cloudflare Worker secret | Verifies Slack Events API payloads |
+| `GITHUB_TOKEN` | Cloudflare Worker secret | Fine-grained PAT (Issues: read+write) for posting comments on issue #60 |
+| `NOTIFY_SECRET` | Cloudflare Worker secret | Shared secret for /notify endpoint |
+| `SLACK_WEBHOOK` | Cloudflare Worker secret | Slack webhook used by /notify endpoint |
 
 ### sprint-panel.json
 
