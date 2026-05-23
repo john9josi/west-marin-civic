@@ -146,7 +146,7 @@ export default {
       const userName = event.user || 'someone';
       const commentBody = `💬 **Slack reply from ${userName}:**\n\n${event.text}`;
 
-      await fetch('https://api.github.com/repos/john9josi/west-marin-civic/issues/60/comments', {
+      const ghRes = await fetch('https://api.github.com/repos/john9josi/west-marin-civic/issues/60/comments', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${githubToken}`,
@@ -155,6 +155,7 @@ export default {
         },
         body: JSON.stringify({ body: commentBody }),
       });
+      console.log('github response:', ghRes.status, await ghRes.text());
 
       return new Response('ok', { status: 200 });
     }
