@@ -1,0 +1,21 @@
+name: Agent Notify
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  notify:
+    if: github.event.issue.number == 60
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Slack
+        uses: slackapi/slack-github-action@v3
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "${{ github.event.comment.body }}",
+              "username": "${{ github.event.comment.user.login }}",
+              "icon_emoji": ":robot_face:"
+            }
