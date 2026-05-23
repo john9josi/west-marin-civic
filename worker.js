@@ -75,6 +75,89 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // Slack Events API: POST /slack-reply (before auth gate)
+    // Receives thread replies from #gh-wmc and posts them as comments on issue #60
+    if (url.pathname === '/slack-reply') {
+      if (request.method !== 'POST') {
+        return new Response('Method not allowed', { status: 405 });
+      }
+
+      const signingSecret = env.SLACK_SIGNING_SECRET;
+      if (!signingSecret) {
+        return new Response('SLACK_SIGNING_SECRET not configured', { status: 500 });
+      }
+
+      const rawBody = await request.text();
+
+      // Verify Slack signature
+      const timestamp = request.headers.get('X-Slack-Request-Timestamp') || '';
+      const slackSig  = request.headers.get('X-Slack-Signature') || '';
+
+      // Reject requests older than 5 minutes (replay attack prevention)
+      if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) {
+        return new Response('Request too old', { status: 403 });
+      }
+
+      const sigBase = `v0:${timestamp}:${rawBody}`;
+      const key = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(signingSecret),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+      );
+      const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(sigBase));
+      const computed = 'v0=' + Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (computed !== slackSig) {
+        return new Response('Invalid signature', { status: 403 });
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(rawBody);
+      } catch {
+        return new Response('Invalid JSON', { status: 400 });
+      }
+
+      // Slack URL verification challenge (one-time during app setup)
+      if (payload.type === 'url_verification') {
+        return new Response(JSON.stringify({ challenge: payload.challenge }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      const event = payload.event || {};
+
+      // Only handle thread replies in #gh-wmc — ignore bot messages and top-level posts
+      if (
+        event.type !== 'message' ||
+        event.subtype === 'bot_message' ||
+        event.bot_id ||
+        !event.thread_ts ||
+        event.thread_ts === event.ts
+      ) {
+        return new Response('ok', { status: 200 });
+      }
+
+      const githubToken = env.GITHUB_TOKEN;
+      if (!githubToken) {
+        return new Response('GITHUB_TOKEN not configured', { status: 500 });
+      }
+
+      const userName = event.user || 'someone';
+      const commentBody = `💬 **Slack reply from ${userName}:**\n\n${event.text}`;
+
+      await fetch('https://api.github.com/repos/john9josi/west-marin-civic/issues/60/comments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${githubToken}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'wmc-worker',
+        },
+        body: JSON.stringify({ body: commentBody }),
+      });
+
+      return new Response('ok', { status: 200 });
+    }
+
     // Slack notification proxy: POST /notify (before auth gate — uses its own secret)
     if (url.pathname === '/notify') {
       if (request.method === 'OPTIONS') {
