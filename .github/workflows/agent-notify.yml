@@ -11,8 +11,11 @@ jobs:
     steps:
       - name: Post to Slack
         run: |
+          BODY=$(echo "$COMMENT" | jq -Rs .)
+          USER=$(echo "$USERNAME" | jq -Rs .)
           curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json' \
-            --data-binary "$PAYLOAD"
+            -d "{\"text\":$BODY,\"username\":$USER,\"icon_emoji\":\":robot_face:\"}"
         env:
-          PAYLOAD: ${{ toJSON(format('{{"text":"{0}","username":"{1}","icon_emoji":":robot_face:"}}', github.event.comment.body, github.event.comment.user.login)) }}
+          COMMENT: ${{ github.event.comment.body }}
+          USERNAME: ${{ github.event.comment.user.login }}
