@@ -126,13 +126,14 @@ export default {
 
       const event = payload.event || {};
 
-      // Only handle thread replies in #gh-wmc — ignore bot messages and top-level posts
+      // Log event shape for debugging
+      console.log('slack event:', JSON.stringify({ type: event.type, subtype: event.subtype, bot_id: event.bot_id, thread_ts: event.thread_ts, ts: event.ts, has_text: !!event.text }));
+
+      // Only handle human messages — ignore bot messages and subtypes (joins, leaves, etc.)
       if (
         event.type !== 'message' ||
-        event.subtype === 'bot_message' ||
-        event.bot_id ||
-        !event.thread_ts ||
-        event.thread_ts === event.ts
+        event.subtype ||
+        event.bot_id
       ) {
         return new Response('ok', { status: 200 });
       }
