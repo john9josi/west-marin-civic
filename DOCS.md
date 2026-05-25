@@ -28,9 +28,10 @@ App also fetches directly from:
     └── ArcGIS / NIFC    (WFIGS active fire data)
 ```
 
-The Cloudflare Worker does two things:
+The Cloudflare Worker does three things:
 1. Serves the static app files
 2. Acts as a proxy for the 511 API (because 511 doesn't allow browser requests — the Worker fetches it server-side and passes it back)
+3. Serves `GET /status` — a plain-text one-liner (e.g. `🟢 All clear · Hwy 1 open · No fires · 10:45 AM PDT`) for pasting into neighborhood Signal/WhatsApp groups
 
 ---
 
@@ -380,6 +381,7 @@ GitHub issue #60 comment (agents read on next run)
 
 | Endpoint | Auth | What it does |
 |---|---|---|
+| `GET /status` | None (public) | Plain-text status summary for sharing in group chats |
 | `POST /notify` | `NOTIFY_SECRET` body field | Slack notification proxy (for non-CCR callers) |
 | `POST /slack-reply` | Slack signing secret (`SLACK_SIGNING_SECRET`) | Receives Slack thread replies, posts to issue #60 |
 
