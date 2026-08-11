@@ -42,6 +42,13 @@ export const CLEAR        = { status: 'Clear', cls: 'g' };
 const         UNKNOWN_ROAD = { status: '—',    cls: '' };
 export const STALE_MINS   = { '511': 15, 'NWS': 15, 'WFIGS': 90, 'PGE': 30 };
 
+// fetch() with a hard timeout — an upstream that hangs would otherwise stall
+// the Worker until Cloudflare's own limit, instead of failing fast so the
+// caller can fall back gracefully.
+export async function fetchWithTimeout(url, options = {}, ms = 5000) {
+  return fetch(url, { ...options, signal: AbortSignal.timeout(ms) });
+}
+
 export function inWestMarin(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return false;
   const [lon, lat] = coords;
