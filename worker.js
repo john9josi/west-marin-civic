@@ -1,5 +1,7 @@
 'use strict';
 
+import { parse511Roads } from './src/lib.js';
+
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -203,6 +205,114 @@ export default {
       }
 
       return new Response('ok', { status: 200 });
+    }
+
+    // Shareable plain-text status: GET /status
+    // Returns a one-liner suitable for pasting into Signal/WhatsApp group chats.
+    if (url.pathname === '/status' && request.method === 'GET') {
+      const timeStr = new Date().toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles', timeZoneName: 'short',
+      });
+
+      try {
+        const FIRE_ALERT_EVENTS = ['Red Flag Warning', 'Fire Warning', 'Extreme Fire Danger'];
+        const FIRE_WATCH_EVENTS = ['Fire Weather Watch'];
+
+        const [rNWS, r511, rWFIGS] = await Promise.allSettled([
+          fetch('https://api.weather.gov/alerts/active?zone=CAZ505', {
+            headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' },
+          }).then(r => r.ok ? r.json() : null),
+
+          env.KEY_511
+            ? fetch(`https://api.511.org/traffic/events?api_key=${env.KEY_511}&format=json`, {
+                headers: { 'Accept-Encoding': 'identity' },
+              }).then(r => r.ok ? r.json() : null)
+            : Promise.resolve(null),
+
+          fetch(
+            'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/' +
+            'WFIGS_Interagency_Incident_Points_Current/FeatureServer/0/query' +
+            '?where=1%3D1&outFields=IncidentName%2CAcres%2CPercentContained%2CModifiedOnDateTime_dt' +
+            '&geometry=-123.1%2C37.75%2C-122.5%2C38.4&geometryType=esriGeometryEnvelope' +
+            '&inSR=4326&spatialRel=esriSpatialRelIntersects&returnGeometry=false&f=json'
+          ).then(r => r.ok ? r.json() : null),
+        ]);
+
+        // NWS: determine alert level
+        let nwsLevel = 'calm';
+        let nwsEvent = null;
+        if (rNWS.status === 'fulfilled' && rNWS.value) {
+          const features = rNWS.value.features || [];
+          for (const f of features) {
+            if (FIRE_ALERT_EVENTS.includes(f.properties?.event)) {
+              nwsLevel = 'alert';
+              nwsEvent = f.properties.event;
+              break;
+            }
+          }
+          if (nwsLevel === 'calm') {
+            for (const f of features) {
+              if (FIRE_WATCH_EVENTS.includes(f.properties?.event)) {
+                nwsLevel = 'watch';
+                nwsEvent = f.properties.event;
+                break;
+              }
+            }
+          }
+        }
+
+        // WFIGS: any active fire in West Marin bbox
+        let fire = null;
+        if (rWFIGS.status === 'fulfilled' && rWFIGS.value) {
+          const features = (rWFIGS.value.features || []).filter(f => f.attributes);
+          if (features.length) {
+            features.sort((a, b) =>
+              (b.attributes.ModifiedOnDateTime_dt || 0) - (a.attributes.ModifiedOnDateTime_dt || 0)
+            );
+            const a = features[0].attributes;
+            fire = {
+              name:  a.IncidentName || 'Active fire',
+              acres: a.Acres != null ? Math.round(a.Acres) : '?',
+            };
+          }
+        }
+
+        // 511: summarise Hwy 1 and other road closures
+        let roadStatus = 'Hwy 1 open';
+        if (r511.status === 'fulfilled' && r511.value) {
+          const roads = parse511Roads(r511.value);
+          const hwy1Closed  = roads['hwy1n']?.cls === 'r' || roads['hwy1s']?.cls === 'r';
+          const hwy1Caution = roads['hwy1n']?.cls === 'a' || roads['hwy1s']?.cls === 'a';
+          const otherClosed = Object.entries(roads).some(
+            ([id, r]) => id !== 'hwy1n' && id !== 'hwy1s' && r.cls === 'r'
+          );
+          if (hwy1Closed)        roadStatus = 'Hwy 1 closed';
+          else if (hwy1Caution)  roadStatus = 'Hwy 1: caution';
+          else if (otherClosed)  roadStatus = 'Road closure reported';
+        }
+
+        // Build response line
+        const level  = fire ? 'alert' : nwsLevel;
+        const emoji  = level === 'alert' ? '🔴' : level === 'watch' ? '🟡' : '🟢';
+        const status = fire
+          ? `Active fire — ${fire.name} · ${fire.acres} ac`
+          : level === 'alert' ? (nwsEvent || 'Active alert')
+          : level === 'watch' ? (nwsEvent || 'Fire Weather Watch')
+          : 'All clear';
+
+        const parts = [`${emoji} ${status}`, roadStatus];
+        if (!fire) parts.push('No fires');
+        parts.push(timeStr);
+
+        return new Response(parts.join(' · ') + '\nwestmarincivic.org', {
+          headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+        });
+      } catch {
+        return new Response(
+          `🟠 Status unknown · call 911 for emergencies · ${timeStr}\nwestmarincivic.org`,
+          { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } }
+        );
+      }
     }
 
     // Dev environment: gate all requests behind a password + cookie session
