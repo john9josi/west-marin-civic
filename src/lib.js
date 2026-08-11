@@ -16,8 +16,11 @@ export const ROADS = [
 ];
 
 // West Marin bounding box — all 511 events must fall within this to be shown
-// Roughly: Stinson Beach north to Tomales, Nicasio east to coast
-export const WM_BBOX = { minLat: 37.85, maxLat: 38.30, minLon: -123.05, maxLon: -122.55 };
+// Roughly: Stinson Beach north to Valley Ford, Nicasio east to coast
+// maxLat 38.34 (not 38.30) — Valley Ford itself sits at ~38.318N, and
+// Valley Ford Rd is one of the tracked ROADS above; the old 38.30 edge
+// silently dropped events there before road-matching ever ran.
+export const WM_BBOX = { minLat: 37.85, maxLat: 38.34, minLon: -123.05, maxLon: -122.55 };
 
 // Keyword matchers — use regex with word boundaries for Hwy 1 to avoid CA-11, CA-13, CA-116 etc.
 // lat: [minLat, maxLat] distinguishes Hwy 1 North vs South at ~38.04 (Olema)
@@ -72,6 +75,20 @@ function matchRoad511(name, lat) {
   return null;
 }
 
+// Per-road status/severity — called once per matched road (not once per
+// event) since a single 511 event can name multiple roads with different
+// states, e.g. a closed highway plus a single-lane-alternating cross street.
+function roadStatus(roadState, ev) {
+  if (roadState === 'CLOSED')                  return { status: 'Closed',           cls: 'r' };
+  if (roadState === 'SINGLE_LANE_ALTERNATING') return { status: 'Single Lane',       cls: 'a' };
+  if (roadState === 'SOME_LANES_CLOSED')       return { status: 'Some Lanes Closed', cls: 'a' };
+  const sev  = (ev.severity   || '').toLowerCase();
+  const type = (ev.event_type || '').toLowerCase();
+  return type.includes('clos') || sev.includes('major') || sev.includes('extreme')
+    ? { status: 'Closed', cls: 'r' }
+    : { status: 'Caution', cls: 'a' };
+}
+
 // Parses a 511 schedule interval string (e.g. "2026-01-01T00:00Z/2026-01-02T18:00Z")
 // and returns a human-readable " · until X PM" suffix, or '' if not applicable.
 export function parseUntilStr(interval) {
@@ -106,18 +123,6 @@ export function parse511Roads(raw) {
     const roads  = ev.roads  || ev.Roads  || [];
     const lat    = Array.isArray(coords) && coords.length >= 2 ? coords[1] : null;
 
-    const roadState = (Array.isArray(roads) && roads[0] && roads[0].state) || '';
-    const { status, cls } = (() => {
-      if (roadState === 'CLOSED')                  return { status: 'Closed',           cls: 'r' };
-      if (roadState === 'SINGLE_LANE_ALTERNATING') return { status: 'Single Lane',       cls: 'a' };
-      if (roadState === 'SOME_LANES_CLOSED')       return { status: 'Some Lanes Closed', cls: 'a' };
-      const sev  = (ev.severity   || '').toLowerCase();
-      const type = (ev.event_type || '').toLowerCase();
-      return type.includes('clos') || sev.includes('major') || sev.includes('extreme')
-        ? { status: 'Closed', cls: 'r' }
-        : { status: 'Caution', cls: 'a' };
-    })();
-
     const untilStr = parseUntilStr(
       ev.schedule && ev.schedule.intervals && ev.schedule.intervals[0]
     );
@@ -142,6 +147,7 @@ export function parse511Roads(raw) {
       const rname = r.name || r.Name || '';
       const id = matchRoad511(rname, lat);
       if (id && !map[id]) {
+        const { status, cls } = roadStatus(r.state || '', ev);
         map[id] = { status, cls, detail };
       }
     }
