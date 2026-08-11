@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "west-marin-civic",
+  "account_id": "b986b1d6ed85c732c1d92c13cabf910d",
   "main": "worker.js",
   "compatibility_date": "2026-04-22",
   "observability": {
