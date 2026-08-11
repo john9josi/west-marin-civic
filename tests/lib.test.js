@@ -1,7 +1,54 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   ageStr, dotState, parse511Roads, buildState, parseUntilStr, inWestMarin, STALE_MINS,
+  fetchWithTimeout,
 } from '../src/lib.js';
+
+// ============================================================
+// fetchWithTimeout
+//
+// The /status endpoint's 3 upstream fetches previously had no timeout
+// guard, so a hung upstream could stall the Worker until Cloudflare's
+// own limit instead of failing fast (#64). These stub global fetch so
+// no real network call is made.
+// ============================================================
+
+describe('fetchWithTimeout', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('resolves normally when the upstream responds before the timeout', async () => {
+    const fakeResponse = { ok: true };
+    const fakeFetch = vi.fn().mockResolvedValue(fakeResponse);
+    vi.stubGlobal('fetch', fakeFetch);
+
+    const res = await fetchWithTimeout('https://example.com', {}, 5000);
+
+    expect(res).toBe(fakeResponse);
+    expect(fakeFetch).toHaveBeenCalledTimes(1);
+    const [, opts] = fakeFetch.mock.calls[0];
+    expect(opts.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('rejects instead of hanging forever when the upstream never responds', async () => {
+    vi.stubGlobal('fetch', (url, opts) => new Promise((resolve, reject) => {
+      opts.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    }));
+
+    await expect(fetchWithTimeout('https://example.com', {}, 20)).rejects.toThrow();
+  });
+
+  it('defaults to a 5s timeout when none is given', async () => {
+    const fakeFetch = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fakeFetch);
+
+    await fetchWithTimeout('https://example.com');
+
+    const [, opts] = fakeFetch.mock.calls[0];
+    expect(opts.signal).toBeInstanceOf(AbortSignal);
+  });
+});
 
 // ============================================================
 // ageStr

@@ -1,6 +1,6 @@
 'use strict';
 
-import { parse511Roads } from './src/lib.js';
+import { parse511Roads, fetchWithTimeout } from './src/lib.js';
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -219,17 +219,17 @@ export default {
         const FIRE_WATCH_EVENTS = ['Fire Weather Watch'];
 
         const [rNWS, r511, rWFIGS] = await Promise.allSettled([
-          fetch('https://api.weather.gov/alerts/active?zone=CAZ505', {
+          fetchWithTimeout('https://api.weather.gov/alerts/active?zone=CAZ505', {
             headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' },
           }).then(r => r.ok ? r.json() : null),
 
           env.KEY_511
-            ? fetch(`https://api.511.org/traffic/events?api_key=${env.KEY_511}&format=json`, {
+            ? fetchWithTimeout(`https://api.511.org/traffic/events?api_key=${env.KEY_511}&format=json`, {
                 headers: { 'Accept-Encoding': 'identity' },
               }).then(r => r.ok ? r.json() : null)
             : Promise.resolve(null),
 
-          fetch(
+          fetchWithTimeout(
             'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/' +
             'WFIGS_Interagency_Incident_Points_Current/FeatureServer/0/query' +
             '?where=1%3D1&outFields=IncidentName%2CAcres%2CPercentContained%2CModifiedOnDateTime_dt' +
