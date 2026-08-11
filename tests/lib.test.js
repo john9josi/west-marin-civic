@@ -279,3 +279,126 @@ describe('buildState', () => {
     expect(Object.keys(s.feeds)).toEqual(['511', 'NWS', 'WFIGS', 'PGE']);
   });
 });
+
+// ============================================================
+// parse511Roads — Hwy 1 N/S boundary regression (#33)
+//
+// #33 was fixed by moving the split latitude from 38.04 to 38.055.
+// None of the tests above exercise a coordinate anywhere near that
+// boundary (they use 38.1 / 37.9), so a repeat drift would go
+// uncaught. These pin the real-world coordinates involved in #33
+// itself plus the exact split value.
+// ============================================================
+
+describe('parse511Roads — Hwy 1 N/S boundary (regression for #33)', () => {
+  it('classifies the real Olema coordinate (38.042) as hwy1s, not hwy1n', () => {
+    const raw = {
+      events: [{
+        status: 'Active',
+        geography: { coordinates: [-122.79, 38.042] },
+        roads: [{ name: 'Highway 1', state: 'CLOSED' }],
+        headline: '',
+      }],
+    };
+    const result = parse511Roads(raw);
+    expect(result['hwy1s']).toBeDefined();
+    expect(result['hwy1n']).toBeUndefined();
+  });
+
+  it('classifies the Point Reyes Station coordinate (38.069) as hwy1n', () => {
+    const raw = {
+      events: [{
+        status: 'Active',
+        geography: { coordinates: [-122.81, 38.069] },
+        roads: [{ name: 'Highway 1', state: 'CLOSED' }],
+        headline: '',
+      }],
+    };
+    const result = parse511Roads(raw);
+    expect(result['hwy1n']).toBeDefined();
+    expect(result['hwy1s']).toBeUndefined();
+  });
+
+  it('treats the exact split latitude (38.055) as hwy1n — inclusive boundary', () => {
+    const raw = {
+      events: [{
+        status: 'Active',
+        geography: { coordinates: [-122.8, 38.055] },
+        roads: [{ name: 'Highway 1', state: 'CLOSED' }],
+        headline: '',
+      }],
+    };
+    const result = parse511Roads(raw);
+    expect(result['hwy1n']).toBeDefined();
+    expect(result['hwy1s']).toBeUndefined();
+  });
+
+  it('classifies just south of the split (38.054) as hwy1s', () => {
+    const raw = {
+      events: [{
+        status: 'Active',
+        geography: { coordinates: [-122.8, 38.054] },
+        roads: [{ name: 'Highway 1', state: 'CLOSED' }],
+        headline: '',
+      }],
+    };
+    const result = parse511Roads(raw);
+    expect(result['hwy1s']).toBeDefined();
+    expect(result['hwy1n']).toBeUndefined();
+  });
+});
+
+// ============================================================
+// parse511Roads — multi-road events
+//
+// status/cls is read once from roads[0].state and then applied to
+// every road ID matched anywhere in the event's roads[] array. An
+// event naming two roads with different states will misreport the
+// second one. This is a plausible cause of "our status doesn't
+// match 511.org's map" reports, since 511 events commonly span an
+// intersection of two named roads.
+// ============================================================
+
+describe('parse511Roads — multi-road events must not bleed status across roads', () => {
+  it('gives each matched road its own status instead of copying roads[0]', () => {
+    const raw = {
+      events: [{
+        status: 'Active',
+        geography: { coordinates: [-122.85, 38.0] },
+        roads: [
+          { name: 'Highway 1', state: 'CLOSED' },
+          { name: 'Sir Francis Drake', state: 'SINGLE_LANE_ALTERNATING' },
+        ],
+        headline: '',
+      }],
+    };
+    const result = parse511Roads(raw);
+    expect(result['hwy1s'].status).toBe('Closed');
+    expect(result['sfd'].status).toBe('Single Lane');
+  });
+});
+
+// ============================================================
+// parse511Roads — Valley Ford Rd vs. WM_BBOX
+//
+// Valley Ford Rd is one of the 11 roads the app tracks (see ROADS
+// in src/lib.js), but the town of Valley Ford itself sits at
+// ~38.318N (per USGS/Wikipedia), north of WM_BBOX.maxLat (38.30).
+// An event geotagged there would be silently dropped by
+// inWestMarin() before road-matching ever runs.
+// ============================================================
+
+describe('parse511Roads — Valley Ford Rd sits at the edge of WM_BBOX', () => {
+  it('does not silently drop an event at Valley Ford\'s real coordinates (38.318N)', () => {
+    const raw = {
+      events: [{
+        status: 'Active',
+        geography: { coordinates: [-122.924, 38.318] },
+        roads: [{ name: 'Valley Ford Rd', state: 'SOME_LANES_CLOSED' }],
+        headline: '',
+      }],
+    };
+    const result = parse511Roads(raw);
+    expect(result['vf']).toBeDefined();
+  });
+});
