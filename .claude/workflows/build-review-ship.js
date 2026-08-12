@@ -195,6 +195,8 @@ The body should say, in under 6 sentences:
 - Automated review verdict: ${finalVerdict}${allConcerns.length ? ` — ${allConcerns.length} concern(s) raised, detailed in a comment on the PR itself` : ' — no blocking concerns'}
 - The PR link: https://github.com/john9josi/west-marin-civic/pull/${build.prNumber}
 - That the review is advisory and a human still decides whether to merge
+- Merge status: ${merge.merged ? (merge.mainGreen ? `MERGED to main, suite green — ready to deploy with \`npx wrangler deploy\`` : `MERGED but main is RED — needs immediate attention`) : `NOT merged — ${merge.error}`}
+- Sign it "— build-review-ship pipeline"`,
 - Sign it "— build-review-ship pipeline"`,
   { phase: 'Report' }
 )
