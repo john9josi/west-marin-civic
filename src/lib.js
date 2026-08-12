@@ -49,6 +49,21 @@ export async function fetchWithTimeout(url, options = {}, ms = 5000) {
   return fetch(url, { ...options, signal: AbortSignal.timeout(ms) });
 }
 
+const SPRINT_BRANCH_RE = /^sprint\/(\d{4}-\d{2}-\d{2})$/;
+
+// Validates a branch name has the exact `sprint/YYYY-MM-DD` shape the sprint
+// system uses (see DOCS.md "Sprint System"). Used to guard the /api/ship and
+// /api/ship-status worker endpoints (#15) before they're passed to the
+// GitHub API — rejects anything that isn't that literal shape, including
+// path-traversal-style input (e.g. `sprint/2026-05-25/../../main`) or dates
+// that don't actually exist (e.g. month 13).
+export function isSprintBranchName(name) {
+  if (typeof name !== 'string') return false;
+  const m = name.match(SPRINT_BRANCH_RE);
+  if (!m) return false;
+  return !isNaN(new Date(m[1] + 'T00:00:00Z').getTime());
+}
+
 export function inWestMarin(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return false;
   const [lon, lat] = coords;

@@ -274,7 +274,9 @@ Staging is password-protected. Every visit prompts for the password (stored as `
 | `NOTIFY_SECRET` | prod + dev | Shared secret for /notify endpoint |
 | `SLACK_WEBHOOK` | prod + dev | Slack webhook URL used by /notify |
 | `SLACK_SIGNING_SECRET` | prod | Verifies Slack Events API payloads on /slack-reply |
-| `GITHUB_TOKEN` | prod | Fine-grained PAT (Issues: read+write) for posting to issue #60 |
+| `GITHUB_TOKEN` | prod + dev | Fine-grained PAT for posting to issue #60 (Issues: read+write) and for Ship to Live (#15) merges (also needs Contents: write) |
+
+Ship to Live (`/api/ship`, `/api/ship-status`) runs from whichever Worker serves the dev bar (staging), so `GITHUB_TOKEN` must be present there with `Contents: write` added to its existing `Issues: read+write` scope, not just on prod.
 
 To set or rotate a secret:
 ```bash
@@ -384,6 +386,10 @@ GitHub issue #60 comment (agents read on next run)
 | `GET /status` | None (public) | Plain-text status summary for sharing in group chats |
 | `POST /notify` | `NOTIFY_SECRET` body field | Slack notification proxy (for non-CCR callers) |
 | `POST /slack-reply` | Slack signing secret (`SLACK_SIGNING_SECRET`) | Receives Slack thread replies, posts to issue #60 |
+| `GET /api/ship-status?branch=sprint/YYYY-MM-DD` | Dev-bar session cookie | Reports whether a sprint branch exists and still has commits ahead of main (#15) |
+| `POST /api/ship` `{branch}` | Dev-bar session cookie | Merges a sprint branch into main via the GitHub "merge a branch" API (#15) |
+
+`/api/ship-status` and `/api/ship` are defined only inside the `DEV_PASSWORD` auth gate — on a Worker where `DEV_PASSWORD` isn't set (prod) they don't exist at all, matching the dev bar itself being hidden there. Both reject any branch name that isn't exactly `sprint/YYYY-MM-DD` (see `isSprintBranchName` in `src/lib.js`) before calling the GitHub API.
 
 ### Secrets
 

@@ -1,6 +1,8 @@
 'use strict';
 
-import { parse511Roads, fetchWithTimeout } from './src/lib.js';
+import { parse511Roads, fetchWithTimeout, isSprintBranchName } from './src/lib.js';
+
+const GH_REPO = 'john9josi/west-marin-civic';
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -71,6 +73,107 @@ function htmlResponse(body, init) {
   const r = new Response(body, init);
   r.headers.set('Content-Security-Policy', CSP);
   return r;
+}
+
+function jsonResponse(obj, status) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function ghApiFetch(path, env, init = {}) {
+  return fetch(`https://api.github.com${path}`, {
+    ...init,
+    headers: {
+      'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'wmc-worker',
+      ...(init.headers || {}),
+    },
+  });
+}
+
+// Ship to Live (#15): GET /api/ship-status?branch=sprint/YYYY-MM-DD
+// Reports whether the given sprint branch exists and still has commits
+// ahead of main, so the dev-bar panel knows whether to show the button.
+async function handleShipStatus(url, env) {
+  if (!env.GITHUB_TOKEN) {
+    return jsonResponse({ error: 'GITHUB_TOKEN not configured' }, 500);
+  }
+
+  const branch = url.searchParams.get('branch') || '';
+  if (!isSprintBranchName(branch)) {
+    return jsonResponse({ error: 'Invalid branch name' }, 400);
+  }
+
+  try {
+    const res = await ghApiFetch(`/repos/${GH_REPO}/compare/main...${branch}`, env);
+
+    if (res.status === 404) {
+      return jsonResponse({ exists: false, merged: false }, 200);
+    }
+    if (!res.ok) {
+      return jsonResponse({ error: 'GitHub API error: ' + res.status }, 502);
+    }
+
+    const data = await res.json();
+    const merged = data.status === 'identical' || data.status === 'behind';
+    return jsonResponse({ exists: true, merged }, 200);
+  } catch (err) {
+    return jsonResponse({ error: 'Upstream error: ' + err.message }, 502);
+  }
+}
+
+// Ship to Live (#15): POST /api/ship { branch: 'sprint/YYYY-MM-DD' }
+// Merges the sprint branch into main via the GitHub "merge a branch" API.
+async function handleShip(request, env) {
+  if (!env.GITHUB_TOKEN) {
+    return jsonResponse({ error: 'GITHUB_TOKEN not configured' }, 500);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: 'Invalid JSON' }, 400);
+  }
+
+  const branch = body?.branch || '';
+  if (!isSprintBranchName(branch)) {
+    return jsonResponse({ error: 'Invalid branch name' }, 400);
+  }
+
+  try {
+    const res = await ghApiFetch(`/repos/${GH_REPO}/merges`, env, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base: 'main',
+        head: branch,
+        commit_message: `Ship to live: merge ${branch}`,
+      }),
+    });
+
+    if (res.status === 201) {
+      const data = await res.json();
+      return jsonResponse({ ok: true, sha: data.sha, url: `https://github.com/${GH_REPO}/commit/${data.sha}` }, 200);
+    }
+    if (res.status === 204) {
+      return jsonResponse({ ok: false, error: 'Branch already merged — nothing to ship' }, 409);
+    }
+    if (res.status === 404) {
+      return jsonResponse({ ok: false, error: 'Sprint branch not found' }, 404);
+    }
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}));
+      return jsonResponse({ ok: false, error: data.message || 'Merge conflict — resolve manually' }, 409);
+    }
+
+    return jsonResponse({ ok: false, error: 'GitHub API error: ' + res.status }, 502);
+  } catch (err) {
+    return jsonResponse({ ok: false, error: 'Upstream error: ' + err.message }, 502);
+  }
 }
 
 export default {
@@ -339,6 +442,22 @@ export default {
       // Not authenticated — show password page for all requests
       if (!authed) {
         return htmlResponse(AUTH_PAGE, { status: 200, headers: { 'Content-Type': 'text/html' } });
+      }
+
+      // Ship to Live (#15): only reachable by an authenticated dev-bar
+      // session, and only exists at all on a Worker where DEV_PASSWORD is
+      // configured (never on prod — see Secrets in DOCS.md).
+      if (url.pathname === '/api/ship-status') {
+        if (request.method !== 'GET') {
+          return new Response('Method not allowed', { status: 405 });
+        }
+        return handleShipStatus(url, env);
+      }
+      if (url.pathname === '/api/ship') {
+        if (request.method !== 'POST') {
+          return new Response('Method not allowed', { status: 405 });
+        }
+        return handleShip(request, env);
       }
     }
 

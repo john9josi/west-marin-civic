@@ -71,3 +71,85 @@ describe('worker auth gate (DEV_PASSWORD set)', () => {
     expect(await res.text()).not.toContain('Password required');
   });
 });
+
+// ============================================================
+// Ship to Live: GET /api/ship-status, POST /api/ship (#15)
+//
+// Both routes live inside the DEV_PASSWORD-gated block in worker.js, so an
+// unauthenticated caller must never reach them — that's what makes it safe
+// for these routes to exist at all on a publicly reachable Worker. The
+// actual GitHub merge call isn't exercised here (no live network access in
+// tests, and it must never hit the real API from a test run); the
+// config-missing branch is exercised instead, same pattern already used for
+// NOTIFY_SECRET/SLACK_SIGNING_SECRET above. GITHUB_TOKEN is deliberately
+// left unset in this project's bindings (see vitest.workspace.js) so that
+// branch is reachable.
+// ============================================================
+
+async function getAuthCookie() {
+  const loginBody = new URLSearchParams({ pwd: 'test-password' });
+  const loginRes = await SELF.fetch('https://example.com/__auth', {
+    method: 'POST',
+    body: loginBody.toString(),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    redirect: 'manual',
+  });
+  const setCookie = loginRes.headers.get('Set-Cookie');
+  const token = setCookie?.match(/wmc_dev_auth=([^;]+)/)?.[1];
+  return `wmc_dev_auth=${token}`;
+}
+
+describe('worker ship-to-live routes (DEV_PASSWORD set)', () => {
+  it('unauthenticated GET /api/ship-status returns the password page, not ship data', async () => {
+    const res = await SELF.fetch('https://example.com/api/ship-status?branch=sprint/2026-05-25');
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('Password required');
+  });
+
+  it('unauthenticated POST /api/ship returns the password page, not ship data', async () => {
+    const res = await SELF.fetch('https://example.com/api/ship', {
+      method: 'POST',
+      body: JSON.stringify({ branch: 'sprint/2026-05-25' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('Password required');
+  });
+
+  it('authenticated GET /api/ship-status without GITHUB_TOKEN configured returns 500', async () => {
+    const cookie = await getAuthCookie();
+    const res = await SELF.fetch('https://example.com/api/ship-status?branch=sprint/2026-05-25', {
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(500);
+    expect(await res.text()).toContain('GITHUB_TOKEN not configured');
+  });
+
+  it('authenticated POST /api/ship without GITHUB_TOKEN configured returns 500', async () => {
+    const cookie = await getAuthCookie();
+    const res = await SELF.fetch('https://example.com/api/ship', {
+      method: 'POST',
+      body: JSON.stringify({ branch: 'sprint/2026-05-25' }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(500);
+    expect(await res.text()).toContain('GITHUB_TOKEN not configured');
+  });
+
+  it('authenticated POST /api/ship-status (wrong method) returns 405', async () => {
+    const cookie = await getAuthCookie();
+    const res = await SELF.fetch('https://example.com/api/ship-status?branch=sprint/2026-05-25', {
+      method: 'POST',
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(405);
+  });
+
+  it('authenticated GET /api/ship (wrong method) returns 405', async () => {
+    const cookie = await getAuthCookie();
+    const res = await SELF.fetch('https://example.com/api/ship', {
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(405);
+  });
+});
