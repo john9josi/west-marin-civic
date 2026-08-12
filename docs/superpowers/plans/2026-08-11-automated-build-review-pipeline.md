@@ -360,6 +360,8 @@ const reviewPrompt = (lens) => `Adversarially review PR #${build.prNumber} in jo
 Run: gh pr diff ${build.prNumber} --repo john9josi/west-marin-civic
 And: gh pr view ${build.prNumber} --repo john9josi/west-marin-civic --json body
 
+If judging this properly requires empirically verifying a claim (e.g. reverting a change and re-running tests to see what a regression would actually look like), clone into an isolated path — git clone https://github.com/john9josi/west-marin-civic /tmp/wmc-review-${build.prNumber}-${lens} — never operate in an ambient or shared working directory, since another process may depend on its state.
+
 Assess, through the ${lens} lens specifically:
 - correctness: does the change actually address what the linked issue asked for, and is the logic right
 - security: any injection risk, secret exposure, unsafe eval/innerHTML-equivalent, or auth/CORS weakening
@@ -368,9 +370,9 @@ Assess, through the ${lens} lens specifically:
 This is a safety-critical app. Default to pass: false if you're at all uncertain — err toward requiring another look rather than rubber-stamping. Return pass (boolean) and concerns (array of specific strings, empty if none).`
 
 const verdicts = await parallel([
-  () => agent(reviewPrompt('correctness'), { phase: 'Review', label: 'review:correctness' }),
-  () => agent(reviewPrompt('security'), { phase: 'Review', label: 'review:security' }),
-  () => agent(reviewPrompt('test-quality'), { phase: 'Review', label: 'review:test-quality' }),
+  () => agent(reviewPrompt('correctness'), { schema: VERDICT_SCHEMA, phase: 'Review', label: 'review:correctness' }),
+  () => agent(reviewPrompt('security'), { schema: VERDICT_SCHEMA, phase: 'Review', label: 'review:security' }),
+  () => agent(reviewPrompt('test-quality'), { schema: VERDICT_SCHEMA, phase: 'Review', label: 'review:test-quality' }),
 ])
 
 const validVerdicts = verdicts.filter(Boolean)
