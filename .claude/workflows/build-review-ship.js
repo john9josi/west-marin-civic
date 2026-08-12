@@ -94,6 +94,10 @@ phase('Build')
 const build = await agent(
   `Implement GitHub issue #${selected.issueNumber} ("${selected.issueTitle}") in john9josi/west-marin-civic using test-driven development.
 
+0. FIRST, guard against building something that already exists. Run:
+   gh pr list --repo john9josi/west-marin-civic --state open --json number,headRefName
+   If any open PR's headRefName is exactly \`auto/${selected.issueNumber}-\` followed by anything, this issue ALREADY has a pipeline PR open. Do NOT build, do NOT clone, do NOT open a second PR. Return prNumber and branch as null with failureReason "Issue #${selected.issueNumber} already has open pipeline PR #<number> — nothing to build." and stop immediately. Opening a duplicate PR against a live repo is worse than doing nothing.
+
 1. Clone fresh: git clone https://github.com/john9josi/west-marin-civic /tmp/wmc-build-${selected.issueNumber} && cd /tmp/wmc-build-${selected.issueNumber}
 2. Read the full issue body (gh issue view ${selected.issueNumber} --repo john9josi/west-marin-civic) plus DOCS.md and CLAUDE.md in this checkout for architecture and conventions.
 3. Create a branch off latest main named exactly: auto/${selected.issueNumber}-<short-kebab-slug-of-the-title>
@@ -149,17 +153,32 @@ const verdicts = await parallel([
 
 const validVerdicts = verdicts.filter(Boolean)
 const passCount = validVerdicts.filter(v => v.pass).length
-const finalVerdict = (validVerdicts.length === 3 && passCount >= 2) ? 'APPROVE' : 'REQUEST_CHANGES'
+// Fail closed: anything short of a full 3-reviewer panel with a 2/3 majority
+// is treated as "needs a human look", never as a pass.
+const finalVerdict = (validVerdicts.length === 3 && passCount >= 2) ? 'CLEAN' : 'CONCERNS'
 const allConcerns = validVerdicts.flatMap(v => v.concerns)
 
+// Posted as a PR COMMENT, not a review state. GitHub does not permit
+// APPROVE/REQUEST_CHANGES on a PR you authored, and this pipeline opens its
+// PRs under the same account it reviews with — so COMMENTED is the only state
+// available, and a comment says the same thing without pretending to be a gate
+// it structurally cannot be. A real approving gate needs a second identity
+// (GitHub App or bot collaborator); see the design doc.
+const commentBody = finalVerdict === 'CLEAN'
+  ? `🤖 **Automated adversarial review: no blocking concerns** (${passCount}/3 independent reviewers passed — correctness, security, test-quality)\n\nThis is advisory, not an approving review. A human still decides whether to merge.`
+  : `🤖 **Automated adversarial review: concerns found** (${passCount}/3 independent reviewers passed)\n\n${allConcerns.map(c => '- ' + c).join('\n')}\n\nThis is advisory, not a blocking review. A human decides whether these are merge-blocking.`
+
 await agent(
-  `Submit a real GitHub PR review on #${build.prNumber} in john9josi/west-marin-civic.
+  `Post a comment on PR #${build.prNumber} in john9josi/west-marin-civic using this exact command:
 
-Run exactly one of:
-- If approving: gh pr review ${build.prNumber} --repo john9josi/west-marin-civic --approve --body "Automated adversarial review (correctness/security/test-quality, 3 independent passes) found no blocking concerns."
-- If requesting changes: gh pr review ${build.prNumber} --repo john9josi/west-marin-civic --request-changes --body "Automated adversarial review found concerns:\\n${allConcerns.map(c => '- ' + c).join('\\n')}"
+gh pr comment ${build.prNumber} --repo john9josi/west-marin-civic --body <the body text below>
 
-Use the ${finalVerdict === 'APPROVE' ? 'approve' : 'request-changes'} form.`,
+Body text to post verbatim (do not summarize, edit, or add to it):
+---
+${commentBody}
+---
+
+Note: this is deliberately a PR comment, not \`gh pr review\` — GitHub rejects APPROVE/REQUEST_CHANGES on a self-authored PR, and this pipeline authors the PRs it reviews.`,
   { phase: 'Review' }
 )
 
