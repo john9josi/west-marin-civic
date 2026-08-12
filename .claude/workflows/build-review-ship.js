@@ -183,4 +183,20 @@ Note: this is deliberately a PR comment, not \`gh pr review\` — GitHub rejects
 )
 
 log(`Review verdict: ${finalVerdict} (${passCount}/3 passed)`)
-return { status: 'reviewed', prNumber: build.prNumber, finalVerdict, concerns: allConcerns }
+
+phase('Report')
+await agent(
+  `Post a status comment on issue #60 in john9josi/west-marin-civic. Issue #60 is this project's agent message bus — a GitHub Action relays its comments to Slack, so this is how the human finds out what the pipeline did.
+
+Run: gh issue comment 60 --repo john9josi/west-marin-civic --body "<body>"
+
+The body should say, in under 6 sentences:
+- Pipeline run built issue #${selected.issueNumber} ("${selected.issueTitle}") as PR #${build.prNumber}
+- Automated review verdict: ${finalVerdict}${allConcerns.length ? ` — ${allConcerns.length} concern(s) raised, detailed in a comment on the PR itself` : ' — no blocking concerns'}
+- The PR link: https://github.com/john9josi/west-marin-civic/pull/${build.prNumber}
+- That the review is advisory and a human still decides whether to merge
+- Sign it "— build-review-ship pipeline"`,
+  { phase: 'Report' }
+)
+
+return { status: 'done', issueNumber: selected.issueNumber, prNumber: build.prNumber, finalVerdict, concerns: allConcerns }
