@@ -371,6 +371,18 @@ body {
 .sprint-preview-btn { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 20px; background: #1a6b3c; color: #fff; border: none; cursor: pointer; }
 .sprint-preview-btn:hover { background: #145c33; }
 
+/* Ship to Live (#15) */
+.sprint-ship { margin-top: 16px; }
+.sprint-ship-btn { display: block; width: 100%; box-sizing: border-box; text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; text-decoration: none; }
+.sprint-ship-btn.ready { background: #1a6b3c; color: #fff; }
+.sprint-ship-btn.ready:hover { background: #145c33; }
+.sprint-ship-btn.confirm { background: #b91c1c; color: #fff; }
+.sprint-ship-btn.confirm:hover { background: #991515; }
+.sprint-ship-btn.shipping { background: #eee; color: #999; cursor: default; }
+.sprint-ship-btn.shipped { background: #e6f4ec; color: #1a6b3c; }
+.sprint-ship-btn.shipped:hover { background: #d9ede1; }
+.sprint-ship-error { font-size: 12px; color: #b91c1c; margin-top: 8px; }
+
 /* Sprint highlight ring — pulses on target element */
 .sprint-highlight {
   outline: 3px solid #1a6b3c;
@@ -993,7 +1005,14 @@ function renderSprintPanel(data) {
     if (data.staging_url) html += `  <a class="sprint-action-btn sprint-action-secondary" href="${data.staging_url}" target="_blank">Staging →</a>\n`;
     html += `</div>\n`;
   }
+  if (data.sprint_start) {
+    html += `<div class="sprint-ship" id="sprintShip"></div>\n`;
+  }
   sprintPanelBody.innerHTML = html;
+
+  if (data.sprint_start) {
+    checkShipStatus('sprint/' + data.sprint_start);
+  }
 
   sprintPanelBody.querySelectorAll('.sprint-preview-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1025,6 +1044,84 @@ function renderSprintPanel(data) {
       }
     });
   });
+}
+
+// ------------------------------------------------------------
+// Ship to Live (#15) — merge the current sprint branch into main
+// from the This Sprint panel. Only checked/wired on localhost or
+// staging (isDev, set later below); the worker endpoints it calls
+// are themselves only defined when DEV_PASSWORD is configured, so
+// this is inert on prod even if it somehow rendered there.
+// ------------------------------------------------------------
+
+function renderShipButton(state, opts = {}) {
+  const el = document.getElementById('sprintShip');
+  if (!el) return;
+  if (state === 'ready') {
+    el.innerHTML = `<button type="button" class="sprint-ship-btn ready" id="sprintShipBtn">Ship to Live →</button>`;
+  } else if (state === 'confirm') {
+    el.innerHTML = `<button type="button" class="sprint-ship-btn confirm" id="sprintShipBtn">Confirm — merge ${esc(opts.branch)} into main?</button>`;
+  } else if (state === 'shipping') {
+    el.innerHTML = `<button type="button" class="sprint-ship-btn shipping" id="sprintShipBtn" disabled>Shipping…</button>`;
+  } else if (state === 'shipped') {
+    el.innerHTML = `<a class="sprint-ship-btn shipped" href="${esc(opts.url)}" target="_blank">✓ Shipped — view commit →</a>`;
+  } else if (state === 'error') {
+    el.innerHTML = `<button type="button" class="sprint-ship-btn ready" id="sprintShipBtn">Ship to Live →</button>
+<div class="sprint-ship-error">${esc(opts.error)}</div>`;
+  }
+}
+
+function wireShipButton(branch) {
+  let confirming = false;
+  let confirmTimer = null;
+
+  renderShipButton('ready');
+
+  document.getElementById('sprintShip').addEventListener('click', async e => {
+    if (e.target.id !== 'sprintShipBtn') return;
+
+    if (!confirming) {
+      confirming = true;
+      renderShipButton('confirm', { branch });
+      confirmTimer = setTimeout(() => { confirming = false; renderShipButton('ready'); }, 5000);
+      return;
+    }
+
+    clearTimeout(confirmTimer);
+    confirming = false;
+    renderShipButton('shipping');
+
+    let data;
+    try {
+      const res = await fetch('/api/ship', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branch }),
+      });
+      data = await res.json();
+    } catch (err) {
+      renderShipButton('error', { error: err.message || 'Ship failed' });
+      return;
+    }
+
+    if (data && data.ok) {
+      renderShipButton('shipped', { url: data.url });
+    } else {
+      renderShipButton('error', { error: (data && data.error) || 'Ship failed' });
+    }
+  });
+}
+
+// Only shows the button when the branch actually exists and still has
+// commits ahead of main (acceptance criterion — no button otherwise).
+function checkShipStatus(branch) {
+  if (!isDev) return;
+  fetch('/api/ship-status?branch=' + encodeURIComponent(branch))
+    .then(r => r.ok ? r.json() : null)
+    .then(status => {
+      if (status && status.exists && !status.merged) wireShipButton(branch);
+    })
+    .catch(() => {});
 }
 
 fetch('/sprint-panel.json').then(r => r.json()).then(renderSprintPanel).catch(() => {});

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   ageStr, dotState, parse511Roads, buildState, parseUntilStr, inWestMarin, STALE_MINS,
-  fetchWithTimeout,
+  fetchWithTimeout, isSprintBranchName,
 } from '../src/lib.js';
 
 // ============================================================
@@ -447,5 +447,60 @@ describe('parse511Roads — Valley Ford Rd sits at the edge of WM_BBOX', () => {
     };
     const result = parse511Roads(raw);
     expect(result['vf']).toBeDefined();
+  });
+});
+
+// ============================================================
+// isSprintBranchName
+//
+// Guards the /api/ship and /api/ship-status worker endpoints (#15) — only
+// a branch shaped exactly like `sprint/YYYY-MM-DD` may be passed through to
+// the GitHub merge API, so this must reject anything that isn't that exact
+// shape, including path-traversal-style or otherwise crafted input.
+// ============================================================
+
+describe('isSprintBranchName', () => {
+  it('accepts a well-formed sprint branch name', () => {
+    expect(isSprintBranchName('sprint/2026-05-25')).toBe(true);
+  });
+
+  it('rejects main', () => {
+    expect(isSprintBranchName('main')).toBe(false);
+  });
+
+  it('rejects a plan branch', () => {
+    expect(isSprintBranchName('plan/2026-05-11')).toBe(false);
+  });
+
+  it('rejects a non-zero-padded date', () => {
+    expect(isSprintBranchName('sprint/2026-5-25')).toBe(false);
+  });
+
+  it('rejects an out-of-range month', () => {
+    expect(isSprintBranchName('sprint/2026-13-01')).toBe(false);
+  });
+
+  it('rejects trailing path segments (traversal attempt)', () => {
+    expect(isSprintBranchName('sprint/2026-05-25/../../main')).toBe(false);
+  });
+
+  it('rejects a bare date with no sprint/ prefix', () => {
+    expect(isSprintBranchName('2026-05-25')).toBe(false);
+  });
+
+  it('rejects null', () => {
+    expect(isSprintBranchName(null)).toBe(false);
+  });
+
+  it('rejects undefined', () => {
+    expect(isSprintBranchName(undefined)).toBe(false);
+  });
+
+  it('rejects a non-string', () => {
+    expect(isSprintBranchName(20260525)).toBe(false);
+  });
+
+  it('rejects empty string', () => {
+    expect(isSprintBranchName('')).toBe(false);
   });
 });
