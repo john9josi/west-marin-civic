@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  ageStr, dotState, parse511Roads, buildState, parseUntilStr, inWestMarin, STALE_MINS,
-  fetchWithTimeout,
+  ageStr, dotState, parse511Roads, buildState, parseUntilStr, inWestMarin, nearestPlace, STALE_MINS,
+  fetchWithTimeout, nwsHourlyUrl, gridFromPoints, DEFAULT_NWS_GRID,
 } from '../src/lib.js';
 
 // ============================================================
@@ -167,6 +167,32 @@ describe('inWestMarin', () => {
 });
 
 // ============================================================
+// nearestPlace
+// ============================================================
+
+describe('nearestPlace', () => {
+  it('snaps Dillon Beach coords to Dillon Beach', () => {
+    expect(nearestPlace(38.2508, -122.9653)).toBe('Dillon Beach');
+  });
+
+  it('snaps Tomales coords to Tomales', () => {
+    expect(nearestPlace(38.2464, -122.9044)).toBe('Tomales');
+  });
+
+  it('snaps Point Reyes Station coords to Point Reyes', () => {
+    expect(nearestPlace(38.069, -122.807)).toBe('Point Reyes');
+  });
+
+  it('returns null outside WM_BBOX', () => {
+    expect(nearestPlace(37.77, -122.42)).toBeNull(); // SF
+  });
+
+  it('returns null for invalid input', () => {
+    expect(nearestPlace(null, null)).toBeNull();
+  });
+});
+
+// ============================================================
 // parse511Roads
 // ============================================================
 
@@ -259,6 +285,12 @@ describe('buildState', () => {
     const s = buildState({ level: 'calm', props: null }, null, {}, null, false, null, {});
     expect(s.level).toBe('calm');
     expect(s.pillTitle).toBe('All clear');
+    expect(s.pillSub).toMatch(/^West Marin ·/);
+  });
+
+  it('uses geolocated placeLabel on calm pill instead of a hardcoded town', () => {
+    const s = buildState({ level: 'calm', props: null }, null, {}, null, false, null, {}, 'Tomales');
+    expect(s.pillSub).toMatch(/^Tomales ·/);
   });
 
   it('returns alert level and fire title when fire is present', () => {
@@ -434,6 +466,51 @@ describe('parse511Roads — multi-road events must not bleed status across roads
 // An event geotagged there would be silently dropped by
 // inWestMarin() before road-matching ever runs.
 // ============================================================
+
+describe('parse511Roads — Dillon Beach Rd', () => {
+  it('matches a Dillon Beach Rd event near Tomales / Dillon Beach', () => {
+    const raw = {
+      events: [{
+        status: 'Active',
+        geography: { coordinates: [-122.94, 38.248] },
+        roads: [{ name: 'Dillon Beach Rd', state: 'CLOSED' }],
+        headline: '',
+      }],
+    };
+    const result = parse511Roads(raw);
+    expect(result['dillon']).toBeDefined();
+    expect(result['dillon'].status).toBe('Closed');
+  });
+});
+
+// ============================================================
+// NWS grid helpers (geolocated weather)
+// ============================================================
+
+describe('nwsHourlyUrl / gridFromPoints', () => {
+  it('builds the default Point Reyes hourly URL', () => {
+    expect(nwsHourlyUrl()).toBe(
+      `https://api.weather.gov/gridpoints/${DEFAULT_NWS_GRID.gridId}/${DEFAULT_NWS_GRID.gridX},${DEFAULT_NWS_GRID.gridY}/forecast/hourly`
+    );
+  });
+
+  it('builds a Dillon Beach grid URL', () => {
+    expect(nwsHourlyUrl({ gridId: 'MTR', gridX: 70, gridY: 130 })).toBe(
+      'https://api.weather.gov/gridpoints/MTR/70,130/forecast/hourly'
+    );
+  });
+
+  it('extracts grid from an NWS points response', () => {
+    expect(gridFromPoints({
+      properties: { gridId: 'MTR', gridX: 72, gridY: 129 },
+    })).toEqual({ gridId: 'MTR', gridX: 72, gridY: 129 });
+  });
+
+  it('returns null for incomplete points payloads', () => {
+    expect(gridFromPoints({})).toBeNull();
+    expect(gridFromPoints(null)).toBeNull();
+  });
+});
 
 describe('parse511Roads — Valley Ford Rd sits at the edge of WM_BBOX', () => {
   it('does not silently drop an event at Valley Ford\'s real coordinates (38.318N)', () => {

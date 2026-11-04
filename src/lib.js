@@ -11,6 +11,7 @@ export const ROADS = [
   { id: 'nic',    label: 'Nicasio Valley Rd' },
   { id: 'marsh',  label: 'Marshall-Petaluma Rd' },
   { id: 'tom',    label: 'Tomales-Petaluma Rd' },
+  { id: 'dillon', label: 'Dillon Beach Rd' },
   { id: 'fallon', label: 'Fallon-Two Rock Rd' },
   { id: 'vf',     label: 'Valley Ford Rd' },
 ];
@@ -21,6 +22,31 @@ export const ROADS = [
 // Valley Ford Rd is one of the tracked ROADS above; the old 38.30 edge
 // silently dropped events there before road-matching ever ran.
 export const WM_BBOX = { minLat: 37.85, maxLat: 38.34, minLon: -123.05, maxLon: -122.55 };
+
+// Named places used to label the calm pill from device geolocation.
+// Keep denser than the status-disc list so Marshall/Olema/etc. snap correctly.
+export const PLACES = [
+  { name: 'Point Reyes',   lat: 38.0690, lon: -122.8069 },
+  { name: 'Inverness Park', lat: 38.0852, lon: -122.8225 },
+  { name: 'Inverness',     lat: 38.0980, lon: -122.8569 },
+  { name: 'Olema',         lat: 38.0419, lon: -122.7880 },
+  { name: 'Marshall',      lat: 38.1602, lon: -122.8939 },
+  { name: 'Tomales',       lat: 38.2464, lon: -122.9044 },
+  { name: 'Dillon Beach',  lat: 38.2508, lon: -122.9653 },
+];
+
+// Nearest named place inside WM_BBOX, or null if outside / invalid.
+export function nearestPlace(lat, lon, places = PLACES) {
+  if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+  if (!inWestMarin([lon, lat])) return null;
+  let best = null;
+  let bestD = Infinity;
+  for (const p of places) {
+    const d = (p.lat - lat) ** 2 + (p.lon - lon) ** 2;
+    if (d < bestD) { bestD = d; best = p.name; }
+  }
+  return best;
+}
 
 // Keyword matchers — use regex with word boundaries for Hwy 1 to avoid CA-11, CA-13, CA-116 etc.
 // lat: [minLat, maxLat] distinguishes Hwy 1 North vs South at ~38.04 (Olema)
@@ -34,9 +60,25 @@ const ROAD_MATCHERS = [
   { id: 'nic',    re: /nicasio\s*valley/i },
   { id: 'marsh',  re: /marshall.petaluma/i },
   { id: 'tom',    re: /tomales.petaluma/i },
+  { id: 'dillon', re: /dillon\s*beach/i },
   { id: 'fallon', re: /fallon.two\s*rock/i },
   { id: 'vf',     re: /valley\s*ford/i },
 ];
+
+// Default hourly weather grid = Point Reyes Station. Overridden at runtime
+// from device geolocation via api.weather.gov/points when available.
+export const DEFAULT_NWS_GRID = { gridId: 'MTR', gridX: 74, gridY: 121 };
+
+export function nwsHourlyUrl(grid = DEFAULT_NWS_GRID) {
+  const g = grid || DEFAULT_NWS_GRID;
+  return `https://api.weather.gov/gridpoints/${g.gridId}/${g.gridX},${g.gridY}/forecast/hourly`;
+}
+
+export function gridFromPoints(data) {
+  const p = data?.properties;
+  if (!p?.gridId || p.gridX == null || p.gridY == null) return null;
+  return { gridId: p.gridId, gridX: p.gridX, gridY: p.gridY };
+}
 
 export const CLEAR        = { status: 'Clear', cls: 'g' };
 const         UNKNOWN_ROAD = { status: '—',    cls: '' };
@@ -188,8 +230,10 @@ function wxEmoji(sf, windMph, level) {
 }
 
 // Accepts fresh as an explicit parameter so it can be tested without global state.
-export function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge, fresh = {}) {
+// placeLabel: calm-pill location string from device geolocation (fallback "West Marin").
+export function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge, fresh = {}, placeLabel = 'West Marin') {
   const getf = src => fresh[src] || { at: null, ok: false };
+  const place = (placeLabel && String(placeLabel).trim()) || 'West Marin';
 
   // --- level ---
   let level = nwsAlert?.level || 'calm';
@@ -210,7 +254,7 @@ export function buildState(nwsAlert, nwsWx, roads511, fire, has511, pge, fresh =
     pillSub   = `NWS CAZ505${exp}`;
   } else {
     pillTitle = 'All clear';
-    pillSub   = `Inverness · ${timeNow()}`;
+    pillSub   = `${place} · ${timeNow()}`;
   }
 
   // Feed freshness suffix on pill during alert — show data age if >2 min old (#4)
