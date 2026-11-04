@@ -83,7 +83,7 @@ body {
   padding: 6px 4px; border-bottom: 2.5px solid transparent;
 }
 .nav-link.is-current { color: var(--forest); font-weight: 600; border-bottom-color: var(--forest); }
-.nav-link:focus-visible, .layer-btn:focus-visible, summary:focus-visible, .place:focus-visible {
+.nav-link:focus-visible, summary:focus-visible, .place:focus-visible {
   outline: 2px solid var(--forest);
   outline-offset: 3px;
 }
@@ -94,14 +94,6 @@ body {
 }
 h1 { font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em; margin-bottom: 8px; }
 .lede { font-size: 16px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
-.layers { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.layer-btn {
-  font: inherit; font-size: 14px; font-weight: 600;
-  color: var(--muted); background: var(--white);
-  border: 0.5px solid var(--sand); border-radius: 999px;
-  padding: 7px 12px; cursor: pointer;
-}
-.layer-btn.is-on { color: var(--forest); border-color: var(--forest); background: rgba(29,58,47,.06); }
 .legend { display: flex; flex-wrap: wrap; gap: 14px 18px; margin-bottom: 10px; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .swatch { width: 22px; height: 12px; flex-shrink: 0; }
@@ -175,7 +167,7 @@ h1 { font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em
   <nav class="nav">
     <a class="wordmark" href="/">West Marin <em>Civic</em></a>
     <div class="nav-links">
-      <a class="nav-link" href="/">Status</a>
+      <a class="nav-link" href="/">Back</a>
       <a class="nav-link is-current" href="/map" aria-current="page">Map</a>
     </div>
   </nav>
@@ -184,13 +176,6 @@ h1 { font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em
     <h1>Where West Marin Civic looks</h1>
     <p class="lede">Road closures and power outages use one rectangle. Active fires use a larger rectangle. Weather alerts use the whole National Weather Service zone for the coastal North Bay. Point Reyes, Inverness, and Inverness Park sit inside all three. The coordinates for each filter are in the FAQ.</p>
 
-    <div class="layers" role="group" aria-label="Map layers">
-      <button type="button" class="layer-btn is-on" data-layer="layer-roads" aria-pressed="true">Roads &amp; PG&amp;E</button>
-      <button type="button" class="layer-btn is-on" data-layer="layer-fires" aria-pressed="true">Fires</button>
-      <button type="button" class="layer-btn is-on" data-layer="layer-nws" aria-pressed="true">NWS zone</button>
-      <button type="button" class="layer-btn is-on" data-layer="layer-split" aria-pressed="true">Hwy 1 split</button>
-      <button type="button" class="layer-btn is-on" data-layer="layer-places" aria-pressed="true">Places</button>
-    </div>
     <div class="legend" aria-hidden="true">
       <span><svg class="swatch" viewBox="0 0 22 12"><rect x="1" y="1" width="20" height="10" fill="rgba(29,58,47,.13)" stroke="#1D3A2F" stroke-width="1.5"/></svg> Roads &amp; PG&amp;E</span>
       <span><svg class="swatch" viewBox="0 0 22 12"><line x1="1" y1="6" x2="21" y2="6" stroke="#C2410C" stroke-width="2" stroke-dasharray="4 3"/></svg> Fires</span>
@@ -471,16 +456,6 @@ document.querySelectorAll(".place").forEach(el => {
       event.preventDefault();
       choose();
     }
-  });
-});
-
-document.querySelectorAll(".layer-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const on = btn.getAttribute("aria-pressed") !== "true";
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
-    btn.classList.toggle("is-on", on);
-    const layer = document.getElementById(btn.dataset.layer);
-    if (layer) layer.toggleAttribute("hidden", !on);
   });
 });
 
