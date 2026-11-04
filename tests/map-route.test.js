@@ -48,5 +48,8 @@ describe('coverage map route', () => {
     expect(html).toContain('38.78°N');
     expect(html).toContain('Where does Highway 1 switch from North to South?');
     expect(html).toContain('38.055°N');
+    expect(html).toContain('>Back</a>');
+    expect(html).not.toContain('layer-btn');
+    expect(html).not.toContain('>Status</a>');
   });
 });
