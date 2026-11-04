@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1D3A2F">
+<meta name="description" content="Map of the coordinates West Marin Civic uses for roads, power, fires, and weather.">
+<link rel="canonical" href="https://westmarincivic.org/map">
+<link rel="icon" href="icon.svg">
+<title>Coverage map — West Marin Civic</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-4XLSRCMHEC"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-4XLSRCMHEC');
+</script>
+<style>
+:root {
+  --fog:     #F4F2EE;
+  --forest:  #1D3A2F;
+  --sky:     #3B7A9E;
+  --sand:    #D9D5CC;
+  --white:   #FFFFFF;
+  --muted:   #4A5A53;
+  --ghost:   #6B6860;
+  --orange:  #C2410C;
+  --divider: #EDEAE3;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; background: var(--fog); font-size: 17px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: var(--fog);
+  color: var(--forest);
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 600px) {
+  body {
+    background: var(--sand);
+    background-image: radial-gradient(circle at 1px 1px, rgba(29,58,47,.07) 1px, transparent 0);
+    background-size: 24px 24px;
+    padding: 40px 20px 60px;
+  }
+}
+.app {
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--fog);
+}
+@media (min-width: 600px) {
+  .app {
+    min-height: unset;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(29,58,47,.10), 0 1px 4px rgba(29,58,47,.06);
+    overflow: hidden;
+  }
+}
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  padding: 14px 20px;
+  border-bottom: 0.5px solid var(--sand);
+  position: sticky;
+  top: 0;
+  background: var(--fog);
+  z-index: 10;
+}
+.wordmark { font-size: 22px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; text-decoration: none; }
+.wordmark em { font-style: normal; color: var(--sky); }
+.nav-links { display: flex; gap: 14px; align-items: center; }
+.nav-link {
+  font-size: 18px; color: var(--muted); text-decoration: none;
+  padding: 6px 4px; border-bottom: 2.5px solid transparent;
+}
+.nav-link.is-current { color: var(--forest); font-weight: 600; border-bottom-color: var(--forest); }
+.nav-link:focus-visible, .layer-btn:focus-visible, summary:focus-visible, .place:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 3px;
+}
+.main { padding: 20px 20px 48px; }
+.status-tag {
+  font-size: 13px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--sky); margin-bottom: 3px;
+}
+h1 { font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em; margin-bottom: 8px; }
+.lede { font-size: 16px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+.layers { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.layer-btn {
+  font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--muted); background: var(--white);
+  border: 0.5px solid var(--sand); border-radius: 999px;
+  padding: 7px 12px; cursor: pointer;
+}
+.layer-btn.is-on { color: var(--forest); border-color: var(--forest); background: rgba(29,58,47,.06); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px 18px; margin-bottom: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.swatch { width: 22px; height: 12px; flex-shrink: 0; }
+.map-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  border: 0.5px solid var(--sand);
+  border-radius: 12px;
+  background: var(--white);
+}
+.map-scroll svg { display: block; width: 640px; height: auto; }
+.map-scroll svg text { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+.zone { fill: rgba(59,122,158,.16); stroke: var(--sky); stroke-width: 1.25; }
+.fire-box { fill: none; stroke: var(--orange); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.road-box { fill: rgba(29,58,47,.13); stroke: var(--forest); stroke-width: 2; }
+.split { stroke: var(--forest); stroke-width: 1.25; stroke-dasharray: 2 3; }
+.grid-line { stroke: var(--sand); stroke-width: 1; }
+.grid-label { fill: var(--ghost); font-size: 11px; }
+.road-label, .edge-label { fill: var(--forest); }
+.road-label { font-size: 13px; font-weight: 700; }
+.edge-label { font-size: 11px; }
+.fire-label { fill: var(--orange); font-size: 12px; font-weight: 700; }
+.zone-label { fill: var(--sky); font-size: 13px; font-weight: 700; }
+.place { cursor: pointer; }
+.place:focus { outline: none; }
+.place:focus-visible .place-dot { stroke: var(--sky); stroke-width: 3; }
+.place-dot { fill: var(--forest); stroke: var(--white); stroke-width: 1.5; }
+.place-label { fill: var(--forest); font-size: 12px; }
+.place.is-selected .place-dot { fill: var(--sky); }
+.place.is-selected .place-label { fill: var(--sky); font-weight: 700; }
+.map-hint { font-size: 13px; color: var(--ghost); margin-top: 8px; }
+@media (min-width: 760px) { .map-hint { display: none; } }
+.caption { font-size: 13px; color: var(--ghost); line-height: 1.5; margin-top: 8px; }
+.place-card {
+  margin-top: 16px;
+  background: var(--white);
+  border: 0.5px solid var(--sand);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.place-kicker {
+  font-size: 12px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--sky); margin-bottom: 4px;
+}
+.place-name { font-size: 18px; font-weight: 700; }
+.place-coord, .place-filters, .place-note { font-size: 15px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
+.section-head {
+  font-size: 13px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--sky);
+  margin: 28px 0 6px; display: flex; align-items: center; gap: 8px;
+}
+.section-head::after { content: ""; flex: 1; height: 0.5px; background: var(--sand); }
+.faq-intro { font-size: 16px; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
+.faq details { border-bottom: 0.5px solid var(--divider); padding: 14px 0; }
+.faq summary { font-size: 17px; font-weight: 700; cursor: pointer; line-height: 1.35; }
+.faq summary:hover { color: var(--sky); }
+.faq p { font-size: 16px; color: var(--muted); line-height: 1.6; margin-top: 10px; }
+.coords { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.coords .span-2 { grid-column: 1 / -1; }
+.coords div { background: var(--white); border: 0.5px solid var(--sand); border-radius: 8px; padding: 10px 12px; }
+.coords dt { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--sky); font-weight: 600; }
+.coords dd { font-size: 20px; font-weight: 700; color: var(--forest); margin-top: 2px; }
+.source { font-size: 13px; color: var(--ghost); line-height: 1.5; margin-top: 16px; }
+.source a { color: var(--sky); }
+.back { display: inline-block; margin-top: 22px; font-size: 16px; font-weight: 700; color: var(--forest); }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <a class="wordmark" href="/">West Marin <em>Civic</em></a>
+    <div class="nav-links">
+      <a class="nav-link" href="/">Status</a>
+      <a class="nav-link is-current" href="/map" aria-current="page">Map</a>
+    </div>
+  </nav>
+  <main class="main">
+    <div class="status-tag">Coverage</div>
+    <h1>Where West Marin Civic looks</h1>
+    <p class="lede">Road closures and power outages use one rectangle. Active fires use a larger rectangle. Weather alerts use the whole National Weather Service zone for the coastal North Bay. Point Reyes, Inverness, and Inverness Park sit inside all three. The coordinates for each filter are in the FAQ.</p>
+
+    <div class="layers" role="group" aria-label="Map layers">
+      <button type="button" class="layer-btn is-on" data-layer="layer-roads" aria-pressed="true">Roads &amp; PG&amp;E</button>
+      <button type="button" class="layer-btn is-on" data-layer="layer-fires" aria-pressed="true">Fires</button>
+      <button type="button" class="layer-btn is-on" data-layer="layer-nws" aria-pressed="true">NWS zone</button>
+      <button type="button" class="layer-btn is-on" data-layer="layer-split" aria-pressed="true">Hwy 1 split</button>
+      <button type="button" class="layer-btn is-on" data-layer="layer-places" aria-pressed="true">Places</button>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span><svg class="swatch" viewBox="0 0 22 12"><rect x="1" y="1" width="20" height="10" fill="rgba(29,58,47,.13)" stroke="#1D3A2F" stroke-width="1.5"/></svg> Roads &amp; PG&amp;E</span>
+      <span><svg class="swatch" viewBox="0 0 22 12"><line x1="1" y1="6" x2="21" y2="6" stroke="#C2410C" stroke-width="2" stroke-dasharray="4 3"/></svg> Fires</span>
+      <span><svg class="swatch" viewBox="0 0 22 12"><rect x="1" y="1" width="20" height="10" fill="rgba(59,122,158,.2)" stroke="#3B7A9E"/></svg> NWS CAZ505</span>
+      <span><svg class="swatch" viewBox="0 0 22 12"><line x1="1" y1="6" x2="21" y2="6" stroke="#1D3A2F" stroke-width="1.5" stroke-dasharray="2 2"/></svg> Hwy 1 split</span>
+    </div>
+
+    <div class="map-scroll">
+      <svg viewBox="0 0 640 768" role="img" aria-label="Map of West Marin Civic coverage. The solid rectangle is roads and PG&E. The dashed rectangle is fires. The filled shape is NWS zone CAZ505. North is up.">
+        <rect width="640" height="768" fill="#F4F2EE"/>
+        <g class="grid-line" fill="none">
+          <line x1="0" y1="756.4" x2="640" y2="756.4"/>
+          <line x1="0" y1="640" x2="640" y2="640"/>
+          <line x1="0" y1="523.6" x2="640" y2="523.6"/>
+          <line x1="0" y1="407.3" x2="640" y2="407.3"/>
+          <line x1="0" y1="290.9" x2="640" y2="290.9"/>
+          <line x1="0" y1="174.5" x2="640" y2="174.5"/>
+          <line x1="0" y1="58.2" x2="640" y2="58.2"/>
+          <line y1="0" x1="36.6" y2="768" x2="36.6"/>
+          <line y1="0" x1="128" y2="768" x2="128"/>
+          <line y1="0" x1="219.4" y2="768" x2="219.4"/>
+          <line y1="0" x1="310.9" y2="768" x2="310.9"/>
+          <line y1="0" x1="402.3" y2="768" x2="402.3"/>
+          <line y1="0" x1="493.7" y2="768" x2="493.7"/>
+          <line y1="0" x1="585.1" y2="768" x2="585.1"/>
+        </g>
+        <g class="grid-label">
+          <text x="78" y="746">37.6°N</text>
+          <text x="8" y="636">37.8°N</text>
+          <text x="8" y="519">38.0°N</text>
+          <text x="8" y="403">38.2°N</text>
+          <text x="8" y="286">38.4°N</text>
+          <text x="8" y="170">38.6°N</text>
+          <text x="8" y="54">38.8°N</text>
+          <text x="36.6" y="760" text-anchor="middle">123.6°W</text>
+          <text x="128" y="760" text-anchor="middle">123.4°W</text>
+          <text x="219.4" y="760" text-anchor="middle">123.2°W</text>
+          <text x="310.9" y="760" text-anchor="middle">123.0°W</text>
+          <text x="402.3" y="760" text-anchor="middle">122.8°W</text>
+          <text x="493.7" y="760" text-anchor="middle">122.6°W</text>
+          <text x="585.1" y="760" text-anchor="middle">122.4°W</text>
+        </g>
+
+        <g id="layer-nws">
+          <path class="zone" d="M530 591.2 L550.3 605.4 L549 612.4 L552.5 619.3 L549.4 620.6 L549.4 625 L543.5 624.6 L539.5 628.5 L528.6 625.6 L525.6 630.9 L522.4 622.4 L516.9 620 L511.3 609.9 L499 604.2 L492.6 596 L480.6 592.5 L475.5 583.4 L496.2 591.5 L500.1 585.7 L497.8 578.9 L508.9 573.4 L529.6 590.5 L530 591.2 Z"/>
+          <path class="zone" d="M106.3 71.7 L110.8 85.4 L142.9 139.9 L179.6 177.9 L180.4 192.5 L227.8 238.2 L243.9 234.3 L260.7 245 L282.9 247.9 L297.4 271.3 L308.1 296.6 L397.7 375.4 L401.4 417.3 L386.9 428 L415.2 475.7 L433.6 525.3 L448 546.7 L469.5 570.1 L475.4 583.3 L457.4 577.6 L473 580 L449.1 562 L456.1 578.2 L446.8 585.4 L436.3 580.2 L431.1 566.8 L409.9 553.7 L405.3 540.1 L392.5 525.6 L369.7 510.9 L343 505.8 L362 507.2 L360.4 503.9 L352.8 504 L354.6 499.3 L352.3 493.7 L349.9 504.1 L342 502.9 L339.4 496.7 L340.9 492.4 L348.9 483.7 L346 480.1 L344.1 486.5 L341.3 486 L340.3 474.5 L343.5 470.6 L340.4 471.9 L336.3 488.3 L331.7 487.6 L330.3 478.5 L329.9 487.8 L334 495.2 L327.1 491 L340.1 503.9 L326.2 509.4 L318.5 520.4 L318.5 524.9 L327.1 529.4 L299.8 526.6 L304.9 522.8 L312.7 503.9 L334.3 433.9 L332.1 421.4 L325.3 417.3 L326 407.5 L313.1 383.4 L335.5 406.3 L333.7 410.9 L342 414.4 L359.5 446.4 L386.3 475.4 L385.2 471.9 L387.5 473.9 L390.6 470.5 L372.7 454.2 L373.4 449.6 L368.9 442.1 L356.1 427.3 L344.7 403.5 L346.1 394.9 L341.2 400.5 L335.8 395.4 L332.4 398.9 L331.7 388.1 L323.6 388.7 L325.9 378 L321.1 366.7 L324.1 364 L327.3 366.1 L317.1 364.7 L310.5 352.6 L299.7 342.9 L291.2 341.3 L286.2 345.7 L287.7 340.6 L294 339.4 L287.7 329.1 L283.7 328.8 L285.9 337.4 L282.9 342.2 L286.9 348.6 L281.1 347.5 L279.3 339.5 L275.1 335.7 L279.5 329.1 L279.6 314.2 L271.7 296.4 L266.7 294.5 L264.3 283.2 L252.2 267.9 L251.8 261.2 L222.8 238.7 L194.3 225.7 L183.1 211.7 L158.2 194.4 L155.4 190.7 L157.5 184.7 L151 176.4 L140.9 170.9 L143.3 167.2 L132.6 157.2 L119.1 131.1 L111.9 127.1 L112.8 122.7 L109.2 116.8 L85.5 95.2 L75.5 91.9 L67.7 81.9 L67 76.6 L73.3 82.6 L74.9 77 L83.7 70.6 L95 71 L106.3 71.7 Z"/>
+          <text class="zone-label" x="242" y="233">NWS CAZ505</text>
+        </g>
+
+        <g id="layer-fires">
+          <path class="fire-box" d="M265.1 290.9 H539.4 V669.1 H265.1 Z"/>
+          <text class="fire-label" x="271" y="284">Fires</text>
+        </g>
+
+        <g id="layer-roads">
+          <path class="road-box" d="M288.0 325.8 H516.6 V610.9 H288.0 Z"/>
+          <text class="road-label" x="296" y="400">Roads &amp; PG&amp;E</text>
+          <text class="edge-label" x="402" y="319" text-anchor="middle">38.34°N</text>
+          <text class="edge-label" x="402" y="626" text-anchor="middle">37.85°N</text>
+          <text class="edge-label" x="280" y="560" text-anchor="end">123.05°W</text>
+          <text class="edge-label" x="524" y="560">122.55°W</text>
+        </g>
+
+        <g id="layer-split">
+          <line class="split" x1="288" y1="491.6" x2="516.6" y2="491.6"/>
+          <text class="edge-label" x="296" y="486">Hwy 1 North</text>
+          <text class="edge-label" x="296" y="506">Hwy 1 South</text>
+        </g>
+
+        <g id="layer-places">
+          <g class="place" data-place="Bodega" role="button" tabindex="0" aria-label="Bodega">
+            <circle cx="322.9" cy="320.3" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="322.9" cy="320.3" r="3.5"/>
+            <text class="place-label" x="322.9" y="306" text-anchor="middle">Bodega</text>
+          </g>
+          <g class="place" data-place="Valley Ford" role="button" tabindex="0" aria-label="Valley Ford">
+            <circle cx="350.9" cy="335.2" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="350.9" cy="335.2" r="3.5"/>
+            <text class="place-label" x="360" y="350">Valley Ford</text>
+          </g>
+          <g class="place" data-place="Bodega Bay" role="button" tabindex="0" aria-label="Bodega Bay">
+            <circle cx="297.7" cy="336.5" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="297.7" cy="336.5" r="3.5"/>
+            <text class="place-label" x="288" y="336" text-anchor="end">Bodega Bay</text>
+          </g>
+          <g class="place" data-place="Petaluma" role="button" tabindex="0" aria-label="Petaluma">
+            <circle cx="477" cy="388.3" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="477" cy="388.3" r="3.5"/>
+            <text class="place-label" x="486" y="386">Petaluma</text>
+          </g>
+          <g class="place" data-place="Novato" role="button" tabindex="0" aria-label="Novato">
+            <circle cx="508.3" cy="461.8" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="508.3" cy="461.8" r="3.5"/>
+            <text class="place-label" x="508" y="448" text-anchor="middle">Novato</text>
+          </g>
+          <g class="place" data-place="Inverness" role="button" tabindex="0" aria-label="Inverness">
+            <circle cx="378.6" cy="467.4" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="378.6" cy="467.4" r="3.5"/>
+            <text class="place-label" x="370" y="456" text-anchor="end">Inverness</text>
+          </g>
+          <g class="place" data-place="Point Reyes Station" role="button" tabindex="0" aria-label="Point Reyes Station">
+            <circle cx="395.7" cy="472.7" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="395.7" cy="472.7" r="3.5"/>
+            <text class="place-label" x="406" y="460">Pt. Reyes Sta.</text>
+          </g>
+          <g class="place" data-place="Nicasio" role="button" tabindex="0" aria-label="Nicasio">
+            <circle cx="448.7" cy="488.7" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="448.7" cy="488.7" r="3.5"/>
+            <text class="place-label" x="458" y="506">Nicasio</text>
+          </g>
+          <g class="place" data-place="Olema" role="button" tabindex="0" aria-label="Olema">
+            <circle cx="407.8" cy="499.9" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="407.8" cy="499.9" r="3.5"/>
+            <text class="place-label" x="407.8" y="516" text-anchor="middle">Olema</text>
+          </g>
+          <g class="place" data-place="Point Reyes Lighthouse" role="button" tabindex="0" aria-label="Point Reyes Lighthouse">
+            <circle cx="300.3" cy="526.2" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="300.3" cy="526.2" r="3.5"/>
+            <text class="place-label" x="290" y="530" text-anchor="end">Lighthouse</text>
+          </g>
+          <g class="place" data-place="San Rafael" role="button" tabindex="0" aria-label="San Rafael">
+            <circle cx="524.9" cy="538.3" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="524.9" cy="538.3" r="3.5"/>
+            <text class="place-label" x="534" y="542">San Rafael</text>
+          </g>
+          <g class="place" data-place="Stinson Beach" role="button" tabindex="0" aria-label="Stinson Beach">
+            <circle cx="475.5" cy="583.4" r="11" fill="transparent"/>
+            <circle class="place-dot" cx="475.5" cy="583.4" r="3.5"/>
+            <text class="place-label" x="484" y="598">Stinson Beach</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <p class="map-hint">Swipe sideways to see the whole coast.</p>
+    <p class="caption">North is up. Grid lines are every 0.2°. The zone’s west edge follows the Pacific coast. Empty ground east of the filled shape is inland, outside the weather zone, not water.</p>
+
+    <section class="place-card" id="place-card" aria-live="polite">
+      <p class="place-kicker">Selected place</p>
+      <p class="place-name" id="place-name">Select a place</p>
+      <p class="place-coord" id="place-coord"></p>
+      <p class="place-filters" id="place-filters">Choose a town on the map to see which filters include it.</p>
+      <p class="place-note" id="place-note"></p>
+    </section>
+
+    <h2 class="section-head" id="coordinates">Coordinates</h2>
+    <p class="faq-intro">Each feed keeps a different set of coordinates. Every edge below is inclusive: a point on the line counts as inside.</p>
+    <div class="faq">
+      <details open>
+        <summary>What coordinates do road closures and PG&amp;E outages cover?</summary>
+        <dl class="coords">
+          <div><dt>South</dt><dd>37.85°N</dd></div>
+          <div><dt>North</dt><dd>38.34°N</dd></div>
+          <div><dt>West</dt><dd>123.05°W</dd></div>
+          <div><dt>East</dt><dd>122.55°W</dd></div>
+        </dl>
+        <p>That rectangle runs from south of Stinson Beach to just past Valley Ford, and from offshore of the Point Reyes headlands to east of Nicasio. It is about 34 miles north to south and 27 miles east to west. A 511 event inside it is shown only when the road name is one of: Hwy 1 North, Hwy 1 South, Sir Francis Drake Blvd, Bear Valley Rd, Point Reyes-Petaluma Rd, Platform Bridge Rd, Nicasio Valley Rd, Marshall-Petaluma Rd, Tomales-Petaluma Rd, Fallon-Two Rock Rd, or Valley Ford Rd. PG&amp;E outages use the same rectangle and do not need a road name.</p>
+      </details>
+      <details open>
+        <summary>What coordinates do active fires cover?</summary>
+        <dl class="coords">
+          <div><dt>South</dt><dd>37.75°N</dd></div>
+          <div><dt>North</dt><dd>38.40°N</dd></div>
+          <div><dt>West</dt><dd>123.10°W</dd></div>
+          <div><dt>East</dt><dd>122.50°W</dd></div>
+        </dl>
+        <p>This is the dashed rectangle. It sticks out past the road box on every side, about 45 miles north to south and 33 miles east to west. Any current WFIGS incident inside it raises an alert. There is no road-name test. San Rafael is outside the road box and still inside this one.</p>
+      </details>
+      <details open>
+        <summary>What coordinates do weather alerts cover?</summary>
+        <dl class="coords">
+          <div class="span-2"><dt>Zone</dt><dd>CAZ505</dd></div>
+          <div><dt>South</dt><dd>37.82°N</dd></div>
+          <div><dt>North</dt><dd>38.78°N</dd></div>
+          <div><dt>West</dt><dd>123.53°W</dd></div>
+          <div><dt>East</dt><dd>122.47°W</dd></div>
+        </dl>
+        <p>Weather uses NWS zone CAZ505, Coastal North Bay Including Point Reyes National Seashore. The numbers above are how far that polygon reaches. They are not a box the app clips to. An alert anywhere in the zone changes the status, including the Sonoma coast north of Valley Ford and a separate piece of the zone around the Marin Headlands. Nicasio, Novato, Fairfax, and Petaluma are outside CAZ505 even though they fall inside the road rectangle.</p>
+      </details>
+      <details open>
+        <summary>Where does Highway 1 switch from North to South?</summary>
+        <dl class="coords">
+          <div><dt>Split</dt><dd>38.055°N</dd></div>
+          <div><dt>On the line</dt><dd>Hwy 1 North</dd></div>
+        </dl>
+        <p>A Highway 1 event at 38.055°N, or any latitude north of it, is Hwy 1 North. South of that line is Hwy 1 South. Olema, at 38.042°N, is on the south side. The line is only used after the event has already passed the road rectangle.</p>
+      </details>
+    </div>
+    <p class="source">Road and power rectangle: <code>WM_BBOX</code> in src/lib.js. Fire rectangle: the WFIGS envelope in index.html and worker.js. Weather zone: <a href="https://api.weather.gov/zones/forecast/CAZ505">api.weather.gov zone CAZ505</a>. Place dots are OpenStreetMap localities, except Inverness, which is the post office on Sir Francis Drake Blvd.</p>
+    <a class="back" href="/">Back to live status</a>
+  </main>
+</div>
+<script>
+const PLACES = {
+  "Bodega": {
+    coord: "38.3494°N, 122.9737°W",
+    roads: false, fires: true, nws: true,
+    note: "About 0.6 miles north of 38.34°N. Road and power points here are dropped. A fire here still counts, and the town is inside CAZ505."
+  },
+  "Valley Ford": {
+    coord: "38.3238°N, 122.9124°W",
+    roads: true, fires: true, nws: true,
+    note: "Inside the road box. The north edge is 38.34°N so Valley Ford Road events are kept."
+  },
+  "Bodega Bay": {
+    coord: "38.3217°N, 123.0288°W",
+    roads: true, fires: true, nws: true,
+    note: "Inside all three filters, near the northwest corner of the road box."
+  },
+  "Petaluma": {
+    coord: "38.2326°N, 122.6365°W",
+    roads: true, fires: true, nws: false,
+    note: "Inside both rectangles and outside the coastal weather zone. A 511 event here is kept only when it names one of the 11 monitored roads."
+  },
+  "Novato": {
+    coord: "38.1062°N, 122.5681°W",
+    roads: true, fires: true, nws: false,
+    note: "Just inside the road box’s east edge at 122.55°W, and outside CAZ505."
+  },
+  "Inverness": {
+    coord: "38.0967°N, 122.8519°W",
+    roads: true, fires: true, nws: true,
+    note: "Inside all three filters. This dot is the Inverness post office on Sir Francis Drake Blvd."
+  },
+  "Point Reyes Station": {
+    coord: "38.0875°N, 122.8145°W",
+    roads: true, fires: true, nws: true,
+    note: "Inside all three filters."
+  },
+  "Nicasio": {
+    coord: "38.0601°N, 122.6984°W",
+    roads: true, fires: true, nws: false,
+    note: "Inside the road box, so a Nicasio Valley Road closure can show. This town point is outside CAZ505."
+  },
+  "Olema": {
+    coord: "38.0408°N, 122.7880°W",
+    roads: true, fires: true, nws: true,
+    note: "Hwy 1 North starts at 38.055°N. Olema is on the Hwy 1 South side of that line."
+  },
+  "Point Reyes Lighthouse": {
+    coord: "37.9956°N, 123.0232°W",
+    roads: true, fires: true, nws: true,
+    note: "Inside all three filters, near the west edge of the road box."
+  },
+  "San Rafael": {
+    coord: "37.9748°N, 122.5317°W",
+    roads: false, fires: true, nws: false,
+    note: "About a mile east of the road box, and still inside the fire box. A fire here raises an alert. A 511 event here is discarded."
+  },
+  "Stinson Beach": {
+    coord: "37.8972°N, 122.6398°W",
+    roads: true, fires: true, nws: true,
+    note: "Inside all three filters. The road box continues south to 37.85°N."
+  }
+};
+
+function yn(inside) { return inside ? "In" : "Out"; }
+
+function selectPlace(name) {
+  const place = PLACES[name];
+  if (!place) return;
+  document.querySelectorAll(".place").forEach(el => {
+    el.classList.toggle("is-selected", el.dataset.place === name);
+  });
+  document.getElementById("place-name").textContent = name;
+  document.getElementById("place-coord").textContent = place.coord;
+  document.getElementById("place-filters").textContent =
+    "Roads and PG&E: " + yn(place.roads) +
+    ". Fires: " + yn(place.fires) +
+    ". NWS CAZ505: " + yn(place.nws) + ".";
+  document.getElementById("place-note").textContent = place.note;
+}
+
+document.querySelectorAll(".place").forEach(el => {
+  const choose = () => selectPlace(el.dataset.place);
+  el.addEventListener("click", choose);
+  el.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      choose();
+    }
+  });
+});
+
+document.querySelectorAll(".layer-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const on = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.classList.toggle("is-on", on);
+    const layer = document.getElementById(btn.dataset.layer);
+    if (layer) layer.toggleAttribute("hidden", !on);
+  });
+});
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "70cf1c1b3dfb488ebb15f72a23c202f3"}'></script>
+</body>
+</html>
