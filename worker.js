@@ -73,6 +73,19 @@ function htmlResponse(body, init) {
   return r;
 }
 
+// Pretty path for the coverage map. Other paths pass through unchanged.
+export function staticAssetPath(pathname) {
+  if (pathname === '/map' || pathname === '/map/') return '/map.html';
+  return pathname;
+}
+
+export function requestForAsset(request) {
+  const url = new URL(request.url);
+  const assetPath = staticAssetPath(url.pathname);
+  if (assetPath === url.pathname) return request;
+  return new Request(new URL(assetPath, url), request);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -379,8 +392,9 @@ export default {
       }
     }
 
-    // All other requests: serve static assets, adding CSP to HTML responses
-    const assetResponse = await env.ASSETS.fetch(request);
+    // All other requests: serve static assets, adding CSP to HTML responses.
+    // /map is the coverage page; the file itself is map.html.
+    const assetResponse = await env.ASSETS.fetch(requestForAsset(request));
     const ct = assetResponse.headers.get('Content-Type') || '';
     if (!ct.includes('text/html')) return assetResponse;
     return withCSP(assetResponse);

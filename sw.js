@@ -4,7 +4,7 @@
 const SHELL_CACHE = 'wmc-shell-v3';
 const API_CACHE   = 'wmc-api-v1';
 
-const SHELL_FILES = ['./index.html', './src/lib.js', './config.js', './manifest.json', './icon.svg'];
+const SHELL_FILES = ['./index.html', './map', './map.html', './src/lib.js', './config.js', './manifest.json', './icon.svg'];
 
 // ---- Install: cache the app shell ----
 self.addEventListener('install', e => {
