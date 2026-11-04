@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="WMC">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon.png" type="image/png" sizes="52x52">
+<link rel="apple-touch-icon" href="icon.png">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-4XLSRCMHEC"></script>
 <script>
@@ -17,7 +20,6 @@
 
   gtag('config', 'G-4XLSRCMHEC');
 </script>
-<link rel="apple-touch-icon" href="icon.svg">
 <title>West Marin Civic</title>
 <style>
 /* ============================================================
@@ -98,9 +100,13 @@ body {
   background: var(--fog);
   z-index: 10;
 }
-.wordmark { font-size: 22px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; user-select: none; }
+.wordmark {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 22px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; user-select: none;
+}
 a.wordmark { text-decoration: none; }
 .wordmark em { font-style: normal; color: var(--sky); }
+.brand-mark { width: 28px; height: 28px; border-radius: 4px; flex-shrink: 0; display: block; }
 .nav-links { display: flex; align-items: center; gap: 14px; font-size: 18px; color: var(--muted); }
 .nav-tabs { display: flex; gap: 14px; }
 .nav-links .emg { color: var(--red); font-weight: 600; }
@@ -403,7 +409,7 @@ a.wordmark { text-decoration: none; }
 <div class="app" id="app" data-state="calm">
 
   <nav class="nav">
-    <a class="wordmark" href="/">West Marin <em>Civic</em></a>
+    <a class="wordmark" href="/"><img class="brand-mark" src="icon.svg" width="28" height="28" alt="">West Marin <em>Civic</em></a>
     <div class="nav-links">
       <div class="nav-tabs" role="tablist">
         <button class="nav-tab emg active" data-tab="home" role="tab" aria-selected="true">Emergency</button>

@@ -6,7 +6,9 @@
 <meta name="theme-color" content="#1D3A2F">
 <meta name="description" content="Map of the coordinates West Marin Civic uses for roads, power, fires, and weather.">
 <link rel="canonical" href="https://westmarincivic.org/map">
-<link rel="icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon.png" type="image/png" sizes="52x52">
+<link rel="apple-touch-icon" href="icon.png">
 <title>Coverage map — West Marin Civic</title>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-4XLSRCMHEC"></script>
 <script>
@@ -75,8 +77,12 @@ body {
   background: var(--fog);
   z-index: 10;
 }
-.wordmark { font-size: 22px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; text-decoration: none; }
+.wordmark {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 22px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; text-decoration: none;
+}
 .wordmark em { font-style: normal; color: var(--sky); }
+.brand-mark { width: 28px; height: 28px; border-radius: 4px; flex-shrink: 0; display: block; }
 .nav-links { display: flex; gap: 14px; align-items: center; }
 .nav-link {
   font-size: 18px; color: var(--muted); text-decoration: none;
@@ -173,7 +179,7 @@ h1 { font-size: 26px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em
 <body>
 <div class="app">
   <nav class="nav">
-    <a class="wordmark" href="/">West Marin <em>Civic</em></a>
+    <a class="wordmark" href="/"><img class="brand-mark" src="icon.svg" width="28" height="28" alt="">West Marin <em>Civic</em></a>
     <div class="nav-links">
       <a class="nav-link" href="/">Status</a>
       <a class="nav-link is-current" href="/map" aria-current="page">Map</a>
