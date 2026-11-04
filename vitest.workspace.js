@@ -5,7 +5,7 @@ export default [
   {
     test: {
       name: 'unit',
-      include: ['tests/lib.test.js'],
+      include: ['tests/lib.test.js', 'tests/map-route.test.js'],
     },
   },
   // Worker routing tests — no DEV_PASSWORD so auth gate is inactive

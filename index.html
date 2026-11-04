@@ -89,6 +89,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 4px;
   padding: 14px 20px;
   border-bottom: 0.5px solid var(--sand);
   position: sticky;
@@ -97,9 +99,21 @@ body {
   z-index: 10;
 }
 .wordmark { font-size: 22px; font-weight: 700; color: var(--forest); letter-spacing: -.01em; user-select: none; }
+a.wordmark { text-decoration: none; }
 .wordmark em { font-style: normal; color: var(--sky); }
-.nav-links { display: flex; gap: 14px; font-size: 18px; color: var(--muted); }
+.nav-links { display: flex; align-items: center; gap: 14px; font-size: 18px; color: var(--muted); }
+.nav-tabs { display: flex; gap: 14px; }
 .nav-links .emg { color: var(--red); font-weight: 600; }
+.nav-link {
+  font-size: 18px; color: var(--muted); text-decoration: none;
+  padding: 6px 4px; border-bottom: 2.5px solid transparent;
+}
+.nav-link:hover { color: var(--forest); }
+.nav-link:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
 
 /* ------------------------------------------------------------------ MAIN */
 .main { padding: 20px 20px 80px; }
@@ -389,10 +403,13 @@ body {
 <div class="app" id="app" data-state="calm">
 
   <nav class="nav">
-    <div class="wordmark">West Marin <em>Civic</em></div>
-    <div class="nav-links" role="tablist">
-      <button class="nav-tab emg active" data-tab="home" role="tab" aria-selected="true">Emergency</button>
-      <button class="nav-tab" data-tab="more" role="tab" aria-selected="false">About</button>
+    <a class="wordmark" href="/">West Marin <em>Civic</em></a>
+    <div class="nav-links">
+      <div class="nav-tabs" role="tablist">
+        <button class="nav-tab emg active" data-tab="home" role="tab" aria-selected="true">Emergency</button>
+        <button class="nav-tab" data-tab="more" role="tab" aria-selected="false">About</button>
+      </div>
+      <a class="nav-link" href="/map">Map</a>
     </div>
   </nav>
 
@@ -504,6 +521,7 @@ body {
       <li>Active fires: <a href="https://data-nifc.opendata.arcgis.com" target="_blank" rel="noopener">WFIGS (federal fire data)</a></li>
     </ul>
     <p class="about-body" style="margin-top:8px;">We monitor the feeds continuously. If one breaks, we say so at the top of the page and in the footer — we don't quietly show stale data.</p>
+    <p class="about-body" style="margin-top:12px;"><a class="from-card-link" href="/map">Map of the area these feeds cover.</a></p>
 
     <div class="section-head" style="margin-top:20px;">Who we are</div>
     <p class="about-body">Built by and for those of us on this side of the hill. No profit incentive. No ads. No profiting on a crisis.</p>
