@@ -1,24 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import worker, { requestForAsset, staticAssetPath } from '../worker.js';
+import worker from '../worker.js';
 
 describe('coverage map route', () => {
-  it('serves /map and /map/ from map.html', () => {
-    expect(staticAssetPath('/map')).toBe('/map.html');
-    expect(staticAssetPath('/map/')).toBe('/map.html');
-    expect(staticAssetPath('/map.html')).toBe('/map.html');
-    expect(staticAssetPath('/')).toBe('/');
-  });
-
-  it('rewrites the asset request URL and leaves other requests alone', () => {
-    const mapReq = requestForAsset(new Request('https://westmarincivic.org/map'));
-    expect(new URL(mapReq.url).pathname).toBe('/map.html');
-
-    const home = new Request('https://westmarincivic.org/');
-    expect(requestForAsset(home)).toBe(home);
-  });
-
-  it('GET /map returns the asset HTML with the site CSP', async () => {
+  it('GET /map asks assets for /map and adds the site CSP', async () => {
     let fetchedPath = '';
     const env = {
       ASSETS: {
@@ -32,11 +17,17 @@ describe('coverage map route', () => {
     };
 
     const res = await worker.fetch(new Request('https://www.westmarincivic.org/map'), env);
-    expect(fetchedPath).toBe('/map.html');
+    expect(fetchedPath).toBe('/map');
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Security-Policy')).toContain("default-src 'none'");
     expect(res.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'");
     expect(await res.text()).toContain('Coverage map');
+  });
+
+  it('does not cache map.html, which redirects to /map', () => {
+    const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+    expect(sw).toContain("'./map'");
+    expect(sw).not.toContain("'./map.html'");
   });
 
   it('map.html FAQ states the coordinates for each filter', () => {
