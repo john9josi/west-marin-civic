@@ -416,7 +416,7 @@ a.wordmark { text-decoration: none; }
   <main class="main page is-active" id="page-home">
 
     <div class="status-tag">Emergency status</div>
-    <div class="status-disc">Serving Point Reyes · Inverness · Inverness Park</div>
+    <div class="status-disc">Serving Point Reyes · Inverness · Tomales · Dillon Beach</div>
 
     <div class="wx-line" id="wxLine">
       <span class="icon">☀️</span>
@@ -448,6 +448,7 @@ a.wordmark { text-decoration: none; }
       <div class="contact-row"><span class="contact-label">Marin Fire – PRS</span><a class="contact-val" href="tel:+14154737699">(415) 473-7699</a></div>
       <div class="contact-row"><span class="contact-label">Marin Sheriff – PRS</span><a class="contact-val" href="tel:+14156631151">(415) 663-1151</a></div>
       <div class="contact-row"><span class="contact-label">Inverness VFD</span><a class="contact-val" href="tel:+14156697151">(415) 669-7151</a></div>
+      <div class="contact-row"><span class="contact-label">Tomales Fire Station</span><a class="contact-val" href="tel:+17078782464">(707) 878-2464</a></div>
     </div>
 
     <!-- Emergency contacts — call buttons (alert only) -->
@@ -476,6 +477,10 @@ a.wordmark { text-decoration: none; }
       <a class="call-btn std" href="tel:+14156697151">
         <span class="call-icon" aria-hidden="true">☎</span>
         <span><span class="call-label">Inverness VFD</span><span class="call-sub" style="display:block">(415) 669-7151</span></span>
+      </a>
+      <a class="call-btn std" href="tel:+17078782464">
+        <span class="call-icon" aria-hidden="true">☎</span>
+        <span><span class="call-label">Tomales Fire Station</span><span class="call-sub" style="display:block">(707) 878-2464</span></span>
       </a>
     </div>
 
@@ -565,7 +570,10 @@ a.wordmark { text-decoration: none; }
 
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "70cf1c1b3dfb488ebb15f72a23c202f3"}'></script>
 <script type="module">
-import { ROADS, CLEAR, ageStr, buildState, parse511Roads, inWestMarin } from './src/lib.js';
+import {
+  ROADS, CLEAR, ageStr, buildState, parse511Roads, inWestMarin, nearestPlace,
+  DEFAULT_NWS_GRID, nwsHourlyUrl, gridFromPoints,
+} from './src/lib.js';
 
 // ============================================================
 // MOCK DATA (dev switcher + loading fallback)
@@ -573,7 +581,7 @@ import { ROADS, CLEAR, ageStr, buildState, parse511Roads, inWestMarin } from './
 
 const MOCK = {
   calm: {
-    level: 'calm', pillTitle: 'All clear', pillSub: 'Inverness · just now',
+    level: 'calm', pillTitle: 'All clear', pillSub: 'West Marin · just now',
     wxIcon: '⛅', wxText: 'Partly cloudy · 58°F · W 12 mph', wxWarn: false,
     roads: ROADS.map(r => ({ ...r, ...CLEAR })),
     feeds: { '511':{age:'3m',state:'live'}, 'NWS':{age:'6m',state:'live'}, 'WFIGS':{age:'42m',state:'live'}, 'PGE':{age:'8m',state:'live'} },
@@ -581,7 +589,7 @@ const MOCK = {
     pge: { outages: [], total: 0 },
   },
   calm_outage: {
-    level: 'calm', pillTitle: 'All clear', pillSub: 'Inverness · just now',
+    level: 'calm', pillTitle: 'All clear', pillSub: 'West Marin · just now',
     wxIcon: '⛅', wxText: 'Partly cloudy · 58°F · W 12 mph', wxWarn: false,
     roads: ROADS.map(r => ({ ...r, ...CLEAR })),
     feeds: { '511':{age:'3m',state:'live'}, 'NWS':{age:'6m',state:'live'}, 'WFIGS':{age:'42m',state:'live'}, 'PGE':{age:'8m',state:'live'} },
@@ -631,6 +639,10 @@ const fresh = { '511': { at: null, ok: false }, 'NWS': { at: null, ok: false }, 
 let currentLevel  = 'calm';
 let failedCycles  = 0;
 let refreshTimer  = null;
+// Calm-pill place label from device geolocation; "West Marin" until resolved / if denied.
+let placeLabel    = 'West Marin';
+// Hourly weather grid — Point Reyes default until device location resolves a local grid.
+let weatherGrid   = { ...DEFAULT_NWS_GRID };
 
 function scheduleNext() {
   clearTimeout(refreshTimer);
@@ -677,11 +689,11 @@ async function fetchNWSAlerts() {
 }
 
 // ============================================================
-// NWS WEATHER  (MTR grid 74,121 = Point Reyes area)
+// NWS WEATHER  (default MTR 74,121 = Point Reyes; overridden by device grid)
 // ============================================================
 
 async function fetchNWSWeather() {
-  const res = await fetchWithTimeout('https://api.weather.gov/gridpoints/MTR/74,121/forecast/hourly', {
+  const res = await fetchWithTimeout(nwsHourlyUrl(weatherGrid), {
     headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' }
   });
   const cachedAt = res.headers.get('X-Cached-At');
@@ -940,6 +952,7 @@ async function refresh() {
         has511,
         rPGE.status   === 'fulfilled' ? rPGE.value   : null,
         fresh,
+        placeLabel,
       );
       currentLevel = state.level;
       render(state);
@@ -1100,6 +1113,49 @@ document.getElementById('pill').classList.add('is-loading');
 // Dev bar visible on localhost and staging Worker — hidden on prod
 const isDev = location.hostname === 'localhost' || location.hostname.includes('-dev.');
 if (!isDev) document.querySelector('.dev-bar').classList.add('is-hidden');
+
+// Resolve device location once for calm-pill place + local NWS weather grid.
+// Falls back to "West Marin" / Point Reyes grid if denied, timed out, outside
+// the bbox, unsupported, or the points lookup fails.
+function getDeviceCoords() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 10 * 60 * 1000 },
+    );
+  });
+}
+
+async function resolveLocationAndGrid() {
+  const coords = await getDeviceCoords();
+  if (!coords || !inWestMarin([coords.lon, coords.lat])) {
+    placeLabel = 'West Marin';
+    return;
+  }
+  placeLabel = nearestPlace(coords.lat, coords.lon) || 'West Marin';
+  try {
+    const url = `https://api.weather.gov/points/${coords.lat.toFixed(4)},${coords.lon.toFixed(4)}`;
+    const res = await fetchWithTimeout(url, {
+      headers: { 'User-Agent': 'westmarincivic.org (john@equanimity.is)' },
+    }, 5000);
+    if (res.ok) {
+      const grid = gridFromPoints(await res.json());
+      if (grid) weatherGrid = grid;
+    }
+  } catch {
+    // Keep DEFAULT_NWS_GRID
+  }
+}
+
+resolveLocationAndGrid().then(() => {
+  // Refresh once so pill + weather pick up the resolved place/grid.
+  if (document.querySelector('.dev-btn.active')?.dataset.s === 'live') {
+    clearTimeout(refreshTimer);
+    refresh();
+  }
+});
 
 refresh(); // scheduleNext() inside chains all future polls
 
