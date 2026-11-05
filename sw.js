@@ -1,7 +1,7 @@
 'use strict';
 
 // Bump SHELL_CACHE version to force re-install after HTML changes
-const SHELL_CACHE = 'wmc-shell-v6';
+const SHELL_CACHE = 'wmc-shell-v7';
 const API_CACHE   = 'wmc-api-v1';
 
 const SHELL_FILES = ['./index.html', './map', './src/lib.js', './config.js', './manifest.json', './icon.svg'];
