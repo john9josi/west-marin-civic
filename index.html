@@ -104,16 +104,6 @@ a.wordmark { text-decoration: none; }
 .nav-links { display: flex; align-items: center; gap: 14px; font-size: 18px; color: var(--muted); }
 .nav-tabs { display: flex; gap: 14px; }
 .nav-links .emg { color: var(--red); font-weight: 600; }
-.nav-link {
-  font-size: 18px; color: var(--muted); text-decoration: none;
-  padding: 6px 4px; border-bottom: 2.5px solid transparent;
-}
-.nav-link:hover { color: var(--forest); }
-.nav-link:focus-visible {
-  outline: 2px solid var(--forest);
-  outline-offset: 3px;
-  border-radius: 2px;
-}
 
 /* ------------------------------------------------------------------ MAIN */
 .main { padding: 20px 20px 80px; }
@@ -409,7 +399,6 @@ a.wordmark { text-decoration: none; }
         <button class="nav-tab emg active" data-tab="home" role="tab" aria-selected="true">Emergency</button>
         <button class="nav-tab" data-tab="more" role="tab" aria-selected="false">About</button>
       </div>
-      <a class="nav-link" href="/map">Map</a>
     </div>
   </nav>
 
@@ -1171,7 +1160,18 @@ function switchTab(target) {
   document.querySelectorAll('.page').forEach(p =>
     p.classList.toggle('is-active', p.id === 'page-' + target)
   );
+  const desired = target === 'more'
+    ? location.pathname + location.search + '#about'
+    : location.pathname + location.search;
+  if (location.pathname + location.search + location.hash !== desired) {
+    history.replaceState(null, '', desired);
+  }
 }
+
+if (location.hash === '#about') switchTab('more');
+window.addEventListener('hashchange', () => {
+  switchTab(location.hash === '#about' ? 'more' : 'home');
+});
 
 document.querySelectorAll('.from-card-link[data-tab]').forEach(link =>
   link.addEventListener('click', e => { e.preventDefault(); switchTab(link.dataset.tab); })

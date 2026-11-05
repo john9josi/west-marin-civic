@@ -48,8 +48,14 @@ describe('coverage map route', () => {
     expect(html).toContain('38.78°N');
     expect(html).toContain('Where does Highway 1 switch from North to South?');
     expect(html).toContain('38.055°N');
-    expect(html).toContain('>Back</a>');
+    expect(html).toContain('href="/#about">About</a>');
     expect(html).not.toContain('layer-btn');
+    expect(html).not.toContain('>Back</a>');
     expect(html).not.toContain('>Status</a>');
+
+    const home = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    expect(home).not.toContain('href="/map">Map</a>');
+    expect(home).toContain('href="/map">Map of the area these feeds cover.</a>');
+    expect(home).toContain("location.hash === '#about'");
   });
 });
